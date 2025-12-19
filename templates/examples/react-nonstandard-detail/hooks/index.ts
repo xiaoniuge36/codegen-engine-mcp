@@ -1,0 +1,1 @@
+export { useDetailData } from './useDetailData';

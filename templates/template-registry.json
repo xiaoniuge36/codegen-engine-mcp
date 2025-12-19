@@ -1,0 +1,124 @@
+{
+  "version": "1.1.0",
+  "templates": [
+    {
+      "id": "react-nonstandard-detail",
+      "name": "React 非标独立详情页（Detail Page）",
+      "paths": ["templates/examples/react-nonstandard-detail/"],
+      "scenes": ["detail", "nonstandard"],
+      "componentScope": "common",
+      "keywords": [
+        "详情",
+        "详情页",
+        "单据详情",
+        "查看",
+        "审批",
+        "流程",
+        "节点",
+        "时间轴",
+        "出差申请单",
+        "单据号",
+        "附件预览",
+        "卡片布局",
+        "路由参数"
+      ],
+      "antiKeywords": ["导入", "上传", "excel", "xlsx", "模板下载", "导入记录", "列表", "表格", "搜索"],
+      "promptTemplateKey": "reactNonStandardDetail"
+    },
+    {
+      "id": "react-import-modal",
+      "name": "React 导入弹窗（Import Modal / Excel Import）",
+      "paths": ["templates/examples/react-import-modal/"],
+      "scenes": ["import", "modal"],
+      "componentScope": "common",
+      "keywords": [
+        "导入",
+        "上传",
+        "excel",
+        "xlsx",
+        "xls",
+        "模板下载",
+        "导入历史",
+        "导入记录",
+        "异步导入",
+        "处理结果",
+        "轮询",
+        "下载错误",
+        "下载处理结果"
+      ],
+      "antiKeywords": ["详情", "审批", "流程", "单据详情"],
+      "promptTemplateKey": "reactImportModal"
+    },
+    {
+      "id": "react-standard-list-crud",
+      "name": "React 标准列表页（ProTable + 搜索 + 新增/编辑弹窗）",
+      "paths": ["templates/examples/react-standard-list-crud/"],
+      "scenes": ["list", "standard", "crud"],
+      "componentScope": "common",
+      "keywords": ["列表", "列表页", "表格", "搜索", "查询", "新增", "编辑", "删除", "批量", "ProTable", "CRUD", "增删改查"],
+      "antiKeywords": ["导入", "xlsx", "excel", "详情页", "单据详情"],
+      "promptTemplateKey": "reactStandardListCrud"
+    },
+    {
+      "id": "react-standard-form-page",
+      "name": "React 标准表单页（独立路由新增/编辑）",
+      "paths": ["templates/examples/react-standard-form-page/"],
+      "scenes": ["form", "standard", "page"],
+      "componentScope": "common",
+      "keywords": ["表单", "表单页", "新增页面", "编辑页面", "保存", "提交", "校验", "路由参数", "id"],
+      "antiKeywords": ["导入", "excel", "xlsx", "列表", "表格"],
+      "promptTemplateKey": "reactStandardFormPage"
+    },
+    {
+      "id": "react-standard-modal-form",
+      "name": "React 标准弹窗表单（ModalForm）",
+      "paths": ["templates/examples/react-standard-modal-form/"],
+      "scenes": ["modal", "standard", "form"],
+      "componentScope": "common",
+      "keywords": ["弹窗", "弹框", "ModalForm", "对话框", "新增", "编辑", "表单", "提交"],
+      "antiKeywords": ["导入", "excel", "xlsx", "详情页", "路由"],
+      "promptTemplateKey": "reactStandardModalForm"
+    },
+    {
+      "id": "vue3-standard-list-crud",
+      "name": "Vue 3 标准列表页（Element Plus + 搜索 + 新增/编辑弹窗）",
+      "paths": ["templates/examples/vue3-standard-list-crud/"],
+      "scenes": ["list", "standard", "crud"],
+      "componentScope": "common",
+      "keywords": ["列表", "列表页", "表格", "搜索", "查询", "新增", "编辑", "删除", "批量", "el-table", "vue3", "composition"],
+      "antiKeywords": ["导入", "xlsx", "excel", "详情页", "单据详情", "vue2"],
+      "promptTemplateKey": "vue3StandardListCrud"
+    },
+    {
+      "id": "vue2-standard-list-crud",
+      "name": "Vue 2 标准列表页（Element UI + 搜索 + 新增/编辑弹窗）",
+      "paths": ["templates/examples/vue2-standard-list-crud/"],
+      "scenes": ["list", "standard", "crud"],
+      "componentScope": "common",
+      "keywords": ["列表", "列表页", "表格", "搜索", "查询", "新增", "编辑", "删除", "批量", "getwayTable", "vue2", "options"],
+      "antiKeywords": ["导入", "xlsx", "excel", "详情页", "单据详情", "vue3"],
+      "promptTemplateKey": "vue2StandardListCrud"
+    },
+    {
+      "id": "react-drawer-form",
+      "name": "React 抽屉编辑表单（DrawerForm）",
+      "paths": ["templates/examples/react-drawer-form/"],
+      "scenes": ["drawer", "form", "edit"],
+      "componentScope": "common",
+      "keywords": ["抽屉", "抽屉编辑", "DrawerForm", "侧边", "新增", "编辑", "表单", "提交"],
+      "antiKeywords": ["导入", "excel", "xlsx", "详情页", "独立页面", "路由"],
+      "promptTemplateKey": "reactDrawerForm"
+    },
+    {
+      "id": "react-drawer-detail",
+      "name": "React 抽屉详情（Drawer Detail）",
+      "paths": ["templates/examples/react-drawer-detail/"],
+      "scenes": ["drawer", "detail", "view"],
+      "componentScope": "common",
+      "keywords": ["抽屉", "抽屉详情", "查看详情", "侧边详情", "Drawer", "详情", "查看"],
+      "antiKeywords": ["导入", "excel", "xlsx", "编辑", "表单", "独立页面", "路由"],
+      "promptTemplateKey": "reactDrawerDetail"
+    }
+  ]
+}
+
