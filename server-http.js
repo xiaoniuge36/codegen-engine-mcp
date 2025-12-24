@@ -30,11 +30,11 @@ app.use((req, res, next) => {
   next()
 })
 
-// 导入工具处理逻辑
+// 🆕 从核心文件 server.js 导入处理逻辑（统一代码源）
 import {
-  handleListTools,
   handleCallTool,
-} from './server-handlers.js'
+  TOOLS_DEFINITION,
+} from './server.js'
 
 /**
  * MCP HTTP endpoint
@@ -65,8 +65,8 @@ app.post('/mcp', async (req, res) => {
         break
 
       case 'tools/list':
-        result = await handleListTools()
-        logger.info('列出工具成功')
+        result = { tools: TOOLS_DEFINITION }
+        logger.info('列出工具成功', { count: TOOLS_DEFINITION.length })
         break
 
       case 'tools/call':

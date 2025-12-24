@@ -1,12 +1,12 @@
 {
   "name": "ai-codegen-engine",
-  "version": "1.0.0",
-  "description": "AI 代码生成引擎 - 智能前端代码生成服务",
+  "version": "1.1.0",
+  "description": "AI 代码生成引擎 - 智能前端代码生成服务（MCP 协议）",
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "start:http": "node server-http.js",
+    "start": "node server-http.js",
+    "start:stdio": "node server.js",
     "dev": "node --watch server-http.js"
   },
   "keywords": [

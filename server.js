@@ -460,9 +460,134 @@ function promptSkeletonByKey(key, requirementText) {
 `
   }
 
+  if (key === 'reactBatchSchemaForm') {
+    return `任务标准：ai-fe-code-std.md 为标准执行任务
+
+一句话需求：${requirement}
+
+页面类型：批量 Schema 表单（BatchSchemaForm）
+
+文件夹名称: <kebab-case，例如 components/batch-edit-modal>
+
+接口及数据结构：
+- 字段配置接口：<例如 getFieldSchema(bizType)>
+- 批量更新接口：<例如 batchUpdateItems({ ids, bizType, updateFields })>
+- 入参：selectedIds（选中的 ID 数组）、bizType（业务类型）
+
+组件需求：
+- ModalForm：显示选中数量；destroyOnClose；maskClosable=false
+- Schema 驱动：根据字段配置动态渲染表单项（text/select/date/number）
+- 批量提示：Alert 提示将要更新的记录数
+- 预览：显示已选记录标签（可选）
+- 提交：批量更新接口；成功 toast 显示数量；onSuccess 回调刷新
+
+强制要求：
+- 字段配置必须从后端获取或从 props 传入
+- 表单项渲染必须根据 schema 动态生成
+- 禁止残留 console.log/debugger
+- 生成后必须 TypeScript/ESLint 自检并修复
+`
+  }
+
   return `任务标准：ai-fe-code-std.md 为标准执行任务
 一句话需求：${requirement}
 `
+}
+
+/**
+ * 🆕 同步模板到图谱和 JSON
+ */
+function syncTemplateToRegistry(templateData) {
+  logger.info('syncTemplateToRegistry', '同步模板到注册表', { templateId: templateData.id })
+  
+  try {
+    const registry = readJson(REGISTRY_PATH)
+    const existingIndex = registry.templates.findIndex(t => t.id === templateData.id)
+    
+    if (existingIndex >= 0) {
+      // 更新现有模板
+      registry.templates[existingIndex] = { ...registry.templates[existingIndex], ...templateData }
+      logger.info('syncTemplateToRegistry', `更新模板: ${templateData.id}`)
+    } else {
+      // 添加新模板
+      registry.templates.push(templateData)
+      logger.info('syncTemplateToRegistry', `添加新模板: ${templateData.id}`)
+    }
+    
+    // 写回 JSON
+    fs.writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2), 'utf8')
+    logger.info('syncTemplateToRegistry', '模板注册表已更新')
+    
+    return { success: true, action: existingIndex >= 0 ? 'updated' : 'created' }
+  } catch (error) {
+    logger.error('syncTemplateToRegistry', '同步模板失败', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 🆕 同步知识图谱（更新组件库知识）
+ */
+function syncKnowledgeGraph(scope, fileName, content) {
+  logger.info('syncKnowledgeGraph', '同步知识图谱', { scope, fileName })
+  
+  try {
+    const targetDir = scope === 'common' 
+      ? path.join(KNOWLEDGE_DIR, 'common')
+      : path.join(KNOWLEDGE_DIR, 'business', fileName.split('/')[0] || 'default')
+    
+    // 确保目录存在
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true })
+    }
+    
+    const targetFile = path.join(targetDir, fileName.endsWith('.md') ? fileName : `${fileName}.md`)
+    const isUpdate = fs.existsSync(targetFile)
+    
+    fs.writeFileSync(targetFile, content, 'utf8')
+    logger.info('syncKnowledgeGraph', `知识图谱已${isUpdate ? '更新' : '创建'}: ${targetFile}`)
+    
+    return { success: true, action: isUpdate ? 'updated' : 'created', path: targetFile }
+  } catch (error) {
+    logger.error('syncKnowledgeGraph', '同步知识图谱失败', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * 🆕 批量同步：同时更新模板和知识图谱
+ */
+function batchSync(templateData, knowledgeUpdates = []) {
+  logger.info('batchSync', '批量同步开始', { 
+    templateId: templateData?.id, 
+    knowledgeCount: knowledgeUpdates.length 
+  })
+  
+  const results = {
+    template: null,
+    knowledge: [],
+    success: true
+  }
+  
+  // 同步模板
+  if (templateData) {
+    results.template = syncTemplateToRegistry(templateData)
+    if (!results.template.success) {
+      results.success = false
+    }
+  }
+  
+  // 同步知识图谱
+  for (const kg of knowledgeUpdates) {
+    const kgResult = syncKnowledgeGraph(kg.scope || 'common', kg.fileName, kg.content)
+    results.knowledge.push({ fileName: kg.fileName, ...kgResult })
+    if (!kgResult.success) {
+      results.success = false
+    }
+  }
+  
+  logger.info('batchSync', '批量同步完成', results)
+  return results
 }
 
 function searchSpecLines(query, maxResults = 10) {
@@ -578,6 +703,72 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             maxResults: { type: 'number', default: 10, description: '最多返回结果数' } 
           },
           required: ['query'],
+        },
+      },
+      {
+        name: 'sync_template',
+        description: '🆕 同步模板到注册表（新增或更新模板配置）',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: '模板ID（kebab-case）' },
+            name: { type: 'string', description: '模板名称' },
+            paths: { type: 'array', items: { type: 'string' }, description: '模板示例路径' },
+            scenes: { type: 'array', items: { type: 'string' }, description: '适用场景标签' },
+            keywords: { type: 'array', items: { type: 'string' }, description: '匹配关键词' },
+            antiKeywords: { type: 'array', items: { type: 'string' }, description: '排除关键词' },
+            promptTemplateKey: { type: 'string', description: '提示词模板 key' },
+            componentScope: { type: 'string', enum: ['common', 'business'], default: 'common', description: '组件库范围' },
+          },
+          required: ['id', 'name'],
+        },
+      },
+      {
+        name: 'sync_knowledge',
+        description: '🆕 同步知识图谱（新增或更新组件库知识文档）',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            scope: { type: 'string', enum: ['common', 'business'], default: 'common', description: '知识范围' },
+            fileName: { type: 'string', description: '文件名（不含 .md 后缀也可）' },
+            content: { type: 'string', description: '知识文档内容（Markdown 格式）' },
+          },
+          required: ['fileName', 'content'],
+        },
+      },
+      {
+        name: 'batch_sync',
+        description: '🆕 批量同步：同时更新模板注册表和知识图谱',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            template: { 
+              type: 'object', 
+              description: '模板配置（可选）',
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                paths: { type: 'array', items: { type: 'string' } },
+                scenes: { type: 'array', items: { type: 'string' } },
+                keywords: { type: 'array', items: { type: 'string' } },
+                antiKeywords: { type: 'array', items: { type: 'string' } },
+                promptTemplateKey: { type: 'string' },
+              },
+            },
+            knowledgeUpdates: { 
+              type: 'array', 
+              description: '知识图谱更新列表（可选）',
+              items: {
+                type: 'object',
+                properties: {
+                  scope: { type: 'string', enum: ['common', 'business'] },
+                  fileName: { type: 'string' },
+                  content: { type: 'string' },
+                },
+              },
+            },
+          },
+          required: [],
         },
       },
     ],
@@ -780,6 +971,96 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     }
 
+    // 🆕 同步模板到注册表
+    if (name === 'sync_template') {
+      const input = z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        paths: z.array(z.string()).optional(),
+        scenes: z.array(z.string()).optional(),
+        keywords: z.array(z.string()).optional(),
+        antiKeywords: z.array(z.string()).optional(),
+        promptTemplateKey: z.string().optional(),
+        componentScope: z.enum(['common', 'business']).default('common'),
+      }).parse(args)
+      
+      logger.info('sync_template', `同步模板`, input)
+      
+      const result = syncTemplateToRegistry(input)
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              ...result,
+              templateId: input.id,
+              templateName: input.name
+            }, null, 2)
+          }
+        ]
+      }
+    }
+
+    // 🆕 同步知识图谱
+    if (name === 'sync_knowledge') {
+      const input = z.object({
+        scope: z.enum(['common', 'business']).default('common'),
+        fileName: z.string().min(1),
+        content: z.string().min(1),
+      }).parse(args)
+      
+      logger.info('sync_knowledge', `同步知识图谱`, { scope: input.scope, fileName: input.fileName })
+      
+      const result = syncKnowledgeGraph(input.scope, input.fileName, input.content)
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      }
+    }
+
+    // 🆕 批量同步
+    if (name === 'batch_sync') {
+      const input = z.object({
+        template: z.object({
+          id: z.string(),
+          name: z.string(),
+          paths: z.array(z.string()).optional(),
+          scenes: z.array(z.string()).optional(),
+          keywords: z.array(z.string()).optional(),
+          antiKeywords: z.array(z.string()).optional(),
+          promptTemplateKey: z.string().optional(),
+          componentScope: z.enum(['common', 'business']).optional(),
+        }).optional(),
+        knowledgeUpdates: z.array(z.object({
+          scope: z.enum(['common', 'business']).optional(),
+          fileName: z.string(),
+          content: z.string(),
+        })).optional(),
+      }).parse(args)
+      
+      logger.info('batch_sync', `批量同步`, { 
+        hasTemplate: !!input.template, 
+        knowledgeCount: input.knowledgeUpdates?.length || 0 
+      })
+      
+      const result = batchSync(input.template, input.knowledgeUpdates || [])
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      }
+    }
+
     logger.error('CallTool', `未知工具: ${name}`)
     return { content: [{ type: 'text', text: `Unknown tool: ${name}` }] }
     
@@ -797,6 +1078,147 @@ export function createServer() {
   logger.info('createServer', 'AI 代码生成引擎服务创建成功')
   return server
 }
+
+/**
+ * 🆕 导出工具列表处理函数（供 HTTP 模式使用）
+ */
+export async function handleListTools() {
+  const toolsResponse = await server.server?.listTools?.() || { tools: [] }
+  return toolsResponse
+}
+
+/**
+ * 🆕 导出工具调用处理函数（供 HTTP 模式使用）
+ * 直接复用 server 的工具调用逻辑
+ */
+export async function handleCallTool(params) {
+  const { name, arguments: args } = params
+  
+  logger.info('handleCallTool', `HTTP 模式工具调用: ${name}`, args)
+  
+  const registry = readJson(REGISTRY_PATH)
+  const templates = registry.templates || []
+
+  // list_templates
+  if (name === 'list_templates') {
+    return { content: [{ type: 'text', text: JSON.stringify(templates, null, 2) }] }
+  }
+
+  // get_template
+  if (name === 'get_template') {
+    const input = z.object({ id: z.string().min(1) }).parse(args)
+    const tpl = templates.find((t) => t.id === input.id)
+    if (!tpl) return { content: [{ type: 'text', text: `Template not found: ${input.id}` }] }
+    return { content: [{ type: 'text', text: JSON.stringify(tpl, null, 2) }] }
+  }
+
+  // match_template
+  if (name === 'match_template') {
+    const input = z.object({ text: z.string(), topK: z.number().int().min(1).max(10).default(3) }).parse(args)
+    const explicit = extractExplicitTemplateId(input.text, templates)
+    const normalized = normalizeText(explicit.restText || input.text)
+    const scored = templates.map((tpl) => {
+      const r = scoreTemplate(normalized, tpl)
+      return { id: tpl.id, name: tpl.name, score: r.score, hits: r.hits, antiHits: r.antiHits }
+    }).sort((a, b) => b.score - a.score)
+    let chosen = scored[0]
+    if (explicit.templateId) {
+      const forced = templates.find((t) => t.id === explicit.templateId)
+      chosen = forced ? { id: forced.id, name: forced.name, score: 999, hits: ['(explicit id)'], antiHits: [] } : chosen
+    }
+    return { content: [{ type: 'text', text: JSON.stringify({ explicitTemplateId: explicit.templateId, requirementText: explicit.restText, top: scored.slice(0, input.topK), chosen }, null, 2) }] }
+  }
+
+  // build_prompt
+  if (name === 'build_prompt') {
+    const input = z.object({ text: z.string(), templateId: z.string().optional() }).parse(args)
+    if (isStructuredPrompt(input.text)) {
+      return { content: [{ type: 'text', text: input.text }] }
+    }
+    const explicit = extractExplicitTemplateId(input.text, templates)
+    const templateId = input.templateId || explicit.templateId
+    const requirementText = explicit.restText || input.text
+    let tpl = templateId ? templates.find((t) => t.id === templateId) : undefined
+    if (!tpl) {
+      const normalized = normalizeText(requirementText)
+      const scored = templates.map((t) => ({ t, ...scoreTemplate(normalized, t) })).sort((a, b) => b.score - a.score)
+      tpl = scored[0]?.t
+    }
+    if (!tpl) return { content: [{ type: 'text', text: 'No templates available.' }] }
+    const out = buildEnhancedPrompt(tpl.id, tpl.name, tpl.promptTemplateKey, requirementText, tpl)
+    return { content: [{ type: 'text', text: JSON.stringify(out, null, 2) }] }
+  }
+
+  // get_component_knowledge
+  if (name === 'get_component_knowledge') {
+    const input = z.object({ scope: z.enum(['common', 'business']).default('common'), projectId: z.string().optional() }).parse(args)
+    const knowledge = getComponentKnowledge(input.scope, input.projectId)
+    return { content: [{ type: 'text', text: JSON.stringify({ scope: input.scope, projectId: input.projectId, knowledge, fileCount: Object.keys(knowledge).length }, null, 2) }] }
+  }
+
+  // get_code_examples
+  if (name === 'get_code_examples') {
+    const input = z.object({ templateId: z.string().min(1) }).parse(args)
+    const examples = getCodeExamples(input.templateId)
+    if (!examples) return { content: [{ type: 'text', text: JSON.stringify({ templateId: input.templateId, examples: null, message: '未找到该模板的示例代码' }, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify({ templateId: input.templateId, examples, fileCount: Object.keys(examples).length }, null, 2) }] }
+  }
+
+  // search_spec
+  if (name === 'search_spec') {
+    const input = z.object({ query: z.string().min(1), maxResults: z.number().int().min(1).max(50).default(10) }).parse(args)
+    const specPath = resolveSpecPath()
+    const results = searchSpecLines(input.query, input.maxResults)
+    return { content: [{ type: 'text', text: JSON.stringify({ specPath, query: input.query, results, resultCount: results.length }, null, 2) }] }
+  }
+
+  // sync_template
+  if (name === 'sync_template') {
+    const input = z.object({
+      id: z.string().min(1), name: z.string().min(1), paths: z.array(z.string()).optional(),
+      scenes: z.array(z.string()).optional(), keywords: z.array(z.string()).optional(),
+      antiKeywords: z.array(z.string()).optional(), promptTemplateKey: z.string().optional(),
+      componentScope: z.enum(['common', 'business']).default('common'),
+    }).parse(args)
+    const result = syncTemplateToRegistry(input)
+    return { content: [{ type: 'text', text: JSON.stringify({ ...result, templateId: input.id, templateName: input.name }, null, 2) }] }
+  }
+
+  // sync_knowledge
+  if (name === 'sync_knowledge') {
+    const input = z.object({ scope: z.enum(['common', 'business']).default('common'), fileName: z.string().min(1), content: z.string().min(1) }).parse(args)
+    const result = syncKnowledgeGraph(input.scope, input.fileName, input.content)
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  }
+
+  // batch_sync
+  if (name === 'batch_sync') {
+    const input = z.object({
+      template: z.object({ id: z.string(), name: z.string(), paths: z.array(z.string()).optional(), scenes: z.array(z.string()).optional(), keywords: z.array(z.string()).optional(), antiKeywords: z.array(z.string()).optional(), promptTemplateKey: z.string().optional(), componentScope: z.enum(['common', 'business']).optional() }).optional(),
+      knowledgeUpdates: z.array(z.object({ scope: z.enum(['common', 'business']).optional(), fileName: z.string(), content: z.string() })).optional(),
+    }).parse(args)
+    const result = batchSync(input.template, input.knowledgeUpdates || [])
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  }
+
+  throw new Error(`Unknown tool: ${name}`)
+}
+
+/**
+ * 🆕 导出工具定义（供 HTTP 模式使用）
+ */
+export const TOOLS_DEFINITION = [
+  { name: 'list_templates', description: '列出模板注册表中的所有模板', inputSchema: { type: 'object', properties: {}, required: [] } },
+  { name: 'get_template', description: '根据模板 ID 获取模板元数据', inputSchema: { type: 'object', properties: { id: { type: 'string', description: '模板 ID' } }, required: ['id'] } },
+  { name: 'match_template', description: '根据一句话需求匹配最合适的模板', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '需求描述或模板ID' }, topK: { type: 'number', default: 3, description: '返回前K个匹配结果' } }, required: ['text'] } },
+  { name: 'build_prompt', description: '构建增强版提示词（自动附加组件库知识和示例代码）', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '用户输入' }, templateId: { type: 'string', description: '可选模板ID' } }, required: ['text'] } },
+  { name: 'get_component_knowledge', description: '获取组件库知识图谱', inputSchema: { type: 'object', properties: { scope: { type: 'string', enum: ['common', 'business'], default: 'common' }, projectId: { type: 'string' } }, required: ['scope'] } },
+  { name: 'get_code_examples', description: '获取模板的示例代码', inputSchema: { type: 'object', properties: { templateId: { type: 'string' } }, required: ['templateId'] } },
+  { name: 'search_spec', description: '在规范文档中搜索关键字', inputSchema: { type: 'object', properties: { query: { type: 'string' }, maxResults: { type: 'number', default: 10 } }, required: ['query'] } },
+  { name: 'sync_template', description: '同步模板到注册表', inputSchema: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, paths: { type: 'array' }, scenes: { type: 'array' }, keywords: { type: 'array' }, antiKeywords: { type: 'array' }, promptTemplateKey: { type: 'string' }, componentScope: { type: 'string' } }, required: ['id', 'name'] } },
+  { name: 'sync_knowledge', description: '同步知识图谱', inputSchema: { type: 'object', properties: { scope: { type: 'string' }, fileName: { type: 'string' }, content: { type: 'string' } }, required: ['fileName', 'content'] } },
+  { name: 'batch_sync', description: '批量同步模板和知识图谱', inputSchema: { type: 'object', properties: { template: { type: 'object' }, knowledgeUpdates: { type: 'array' } }, required: [] } },
+]
 
 async function mainStdio() {
   logger.info('mainStdio', 'AI 代码生成引擎启动（STDIO 模式）')

@@ -26,9 +26,9 @@
       "promptTemplateKey": "reactNonStandardDetail"
     },
     {
-      "id": "react-import-modal",
-      "name": "React 导入弹窗（Import Modal / Excel Import）",
-      "paths": ["templates/examples/react-import-modal/"],
+      "id": "react-import-list-modal",
+      "name": "React 带列表导入弹窗（Import List Modal / Excel Import）",
+      "paths": ["templates/examples/react-import-list-modal/"],
       "scenes": ["import", "modal"],
       "componentScope": "common",
       "keywords": [
@@ -47,7 +47,7 @@
         "下载处理结果"
       ],
       "antiKeywords": ["详情", "审批", "流程", "单据详情"],
-      "promptTemplateKey": "reactImportModal"
+      "promptTemplateKey": "reactImportListModal"
     },
     {
       "id": "react-standard-list-crud",
@@ -118,6 +118,16 @@
       "keywords": ["抽屉", "抽屉详情", "查看详情", "侧边详情", "Drawer", "详情", "查看"],
       "antiKeywords": ["导入", "excel", "xlsx", "编辑", "表单", "独立页面", "路由"],
       "promptTemplateKey": "reactDrawerDetail"
+    },
+    {
+      "id": "react-batch-schema-form",
+      "name": "React 批量 Schema 表单（BatchSchemaForm）",
+      "paths": ["templates/examples/react-batch-schema-form/"],
+      "scenes": ["batch", "schema", "form", "modal"],
+      "componentScope": "common",
+      "keywords": ["批量", "批量编辑", "批量更新", "schema", "动态表单", "多选", "批量操作", "批量审批", "批量修改"],
+      "antiKeywords": ["导入", "excel", "xlsx", "详情页", "单条", "单个"],
+      "promptTemplateKey": "reactBatchSchemaForm"
     }
   ]
 }
