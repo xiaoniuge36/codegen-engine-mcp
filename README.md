@@ -62,16 +62,21 @@ codegen-engine/
 │   ├── server.js                 # MCP 服务器（STDIO 模式）
 │   ├── server-http.js            # HTTP 服务器
 │   ├── utils/                    # 工具函数
+│   │   ├── index.js              # 工具导出
 │   │   ├── logger.js             # 日志工具
 │   │   ├── file.js               # 文件操作
 │   │   └── config.js             # 配置常量
 │   ├── spec/                     # 规范文档相关
+│   │   └── index.js              # 规范搜索与获取
 │   ├── matching/                 # 模板匹配相关
+│   │   ├── index.js              # 匹配模块导出
 │   │   ├── tech-stack.js         # 技术栈检测
 │   │   ├── matcher.js            # 模板匹配
 │   │   └── knowledge.js          # 知识库/示例
 │   ├── types/                    # 类型检查
+│   │   └── index.js              # 全局类型检查/API类型解析
 │   └── tools/                    # MCP 工具
+│       ├── index.js              # 工具导出
 │       ├── definitions.js        # 工具定义
 │       ├── handlers.js           # 工具处理器
 │       ├── prompts.js            # 提示词构建
@@ -79,11 +84,31 @@ codegen-engine/
 ├── rules/                        # 规则文件（内置）
 │   └── ai-fe-code-std.md
 ├── knowledge/                    # 组件库知识图谱
-│   ├── common/
-│   └── business/
+│   ├── common/                   # 通用组件库（6个文件）
+│   │   ├── ant-design-pro.md
+│   │   ├── element-plus.md
+│   │   ├── element-ui.md
+│   │   ├── react-drawer-form.md
+│   │   ├── template-usage-guide.md
+│   │   └── vant-components.md
+│   └── business/                 # 业务组件库
+│       └── [project-id]/
 └── templates/                    # 模板数据
-    ├── template-registry.json
-    └── examples/
+    ├── template-registry.json    # 模板注册表
+    └── examples/                 # 示例代码库（13个模板）
+        ├── react-standard-list-crud/
+        ├── react-standard-modal-form/
+        ├── react-standard-form-page/
+        ├── react-drawer-form/
+        ├── react-drawer-detail/
+        ├── react-nonstandard-detail/
+        ├── react-import-list-modal/
+        ├── react-pc-file-upload/
+        ├── react-batch-schema-form/
+        ├── vue2-standard-list-crud/
+        ├── vue2-h5-file-upload/
+        ├── vue2-pc-file-upload/
+        └── vue3-standard-list-crud/
 ```
 
 ---

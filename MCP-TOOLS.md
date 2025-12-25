@@ -776,21 +776,24 @@ AI 处理流程：
               └─────────────────────────────────────────────┘
 ```
 
-### 核心文件（仅 2 个）
+### 核心文件
 
 | 文件 | 职责 | 启动命令 | 使用场景 |
 |-----|------|---------|---------|
-| `server.js` | **核心文件** - 包含所有业务逻辑和工具定义 | `npm run start:stdio` | AI IDE 集成（STDIO） |
-| `server-http.js` | **HTTP 适配器** - 轻量 Express 服务 | `npm run start` | 调试测试（HTTP） |
+| `src/server.js` | **核心文件** - MCP 服务器（STDIO 模式） | `npm run start:stdio` | AI IDE 集成（STDIO） |
+| `src/server-http.js` | **HTTP 适配器** - 轻量 Express 服务 | `npm run start` | 调试测试（HTTP） |
+| `src/index.js` | **统一导出入口** - 模块化导出 | - | 内部引用 |
 
-### 文件关系
+### 模块化架构
 
 ```javascript
-// server.js - 核心文件，导出供 HTTP 模式使用
-export { handleCallTool, TOOLS_DEFINITION }
+// src/index.js - 统一导出入口
+export { handleCallTool, TOOLS_DEFINITION } from './tools/index.js'
+export { ... } from './matching/index.js'
+export { ... } from './utils/index.js'
 
-// server-http.js - HTTP 适配器，导入核心逻辑
-import { handleCallTool, TOOLS_DEFINITION } from './server.js'
+// src/server-http.js - HTTP 适配器
+import { handleCallTool, TOOLS_DEFINITION } from './tools/index.js'
 ```
 
 **优点**：
@@ -804,33 +807,61 @@ import { handleCallTool, TOOLS_DEFINITION } from './server.js'
 
 ```
 codegen-engine/
-├── server.js                 # 🎯 核心文件（STDIO + 业务逻辑 + 导出）
-├── server-http.js            # HTTP 适配器（从 server.js 导入）
-├── package.json              # 依赖配置
-├── MCP-TOOLS.md              # 本文档
-├── README.md                 # 项目说明
-├── knowledge/                # 组件库知识图谱
-│   ├── common/              # 通用组件库
+├── src/                          # v2.0 模块化源码
+│   ├── index.js                  # 统一导出入口
+│   ├── server.js                 # MCP 服务器（STDIO 模式）
+│   ├── server-http.js            # HTTP 服务器
+│   ├── utils/                    # 工具函数
+│   │   ├── index.js              # 工具导出
+│   │   ├── logger.js             # 日志工具
+│   │   ├── file.js               # 文件操作
+│   │   └── config.js             # 配置常量
+│   ├── spec/                     # 规范文档相关
+│   │   └── index.js              # 规范搜索与获取
+│   ├── matching/                 # 模板匹配相关
+│   │   ├── index.js              # 匹配模块导出
+│   │   ├── tech-stack.js         # 技术栈检测
+│   │   ├── matcher.js            # 模板匹配
+│   │   └── knowledge.js          # 知识库/示例
+│   ├── types/                    # 类型检查
+│   │   └── index.js              # 全局类型检查/API类型解析
+│   └── tools/                    # MCP 工具
+│       ├── index.js              # 工具导出
+│       ├── definitions.js        # 工具定义
+│       ├── handlers.js           # 工具处理器
+│       ├── prompts.js            # 提示词构建
+│       └── context.js            # 上下文生成
+├── rules/                        # 规则文件（内置）
+│   └── ai-fe-code-std.md
+├── knowledge/                    # 组件库知识图谱
+│   ├── common/                   # 通用组件库
 │   │   ├── ant-design-pro.md
-│   │   └── element-plus.md
-│   └── business/            # 业务组件库
+│   │   ├── element-plus.md
+│   │   ├── element-ui.md
+│   │   ├── react-drawer-form.md
+│   │   ├── template-usage-guide.md
+│   │   └── vant-components.md
+│   └── business/                 # 业务组件库
 │       └── [project-id]/
-└── templates/
-    ├── template-registry.json  # 模板注册表
-    └── examples/               # 示例代码库
-        ├── react-standard-list-crud/
-        ├── react-standard-modal-form/
-        ├── react-standard-form-page/
-        ├── react-drawer-form/
-        ├── react-drawer-detail/
-        ├── react-nonstandard-detail/
-        ├── react-import-list-modal/
-        ├── react-pc-file-upload/     # 🆕 PC 文件上传
-        ├── react-batch-schema-form/  # 🆕 批量 Schema 表单
-        ├── vue2-standard-list-crud/
-        ├── vue2-h5-file-upload/      # 🆕 H5 文件上传
-        ├── vue2-pc-file-upload/      # 🆕 PC 文件上传
-        └── vue3-standard-list-crud/
+├── templates/
+│   ├── template-registry.json    # 模板注册表
+│   └── examples/                 # 示例代码库（13个模板）
+│       ├── react-standard-list-crud/
+│       ├── react-standard-modal-form/
+│       ├── react-standard-form-page/
+│       ├── react-drawer-form/
+│       ├── react-drawer-detail/
+│       ├── react-nonstandard-detail/
+│       ├── react-import-list-modal/
+│       ├── react-pc-file-upload/
+│       ├── react-batch-schema-form/
+│       ├── vue2-standard-list-crud/
+│       ├── vue2-h5-file-upload/
+│       ├── vue2-pc-file-upload/
+│       └── vue3-standard-list-crud/
+├── package.json
+├── MCP-TOOLS.md                  # 本文档
+└── README.md                     # 项目说明
 ```
 
 ---
