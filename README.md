@@ -1,5 +1,7 @@
 # 🚀 AI 代码生成引擎 (AI CodeGen Engine)
 
+> **v2.0.0** - 模块化重构版本
+
 智能前端代码生成服务 - 通过模板匹配、组件库知识图谱和示例代码，将代码可用度从 70% 提升至 80%。
 
 ---
@@ -21,9 +23,11 @@
 - hooks 示例、组件示例、类型示例
 - AI 学习真实项目代码风格
 
-### 4️⃣ 规范文档检索
-- 快速搜索 `ai-fe-code-std.md` 中的规则
-- 支持关键字精确定位
+### 4️⃣ 规范文档检索 🆕
+- **规则文件已内置**：`rules/ai-fe-code-std.md` 集成在 MCP 中
+- 用户无需手动添加规则文件，直接调用即可
+- 支持 `get_spec_content` 获取规则内容
+- 支持 `search_spec` 关键字精确定位
 
 ### 5️⃣ 增强版提示词生成 🆕
 - 自动组装：提示词骨架 + 组件库知识 + 示例代码 + 规范文档
@@ -53,28 +57,33 @@ AI 生成代码（可用度 80%）
 
 ```
 codegen-engine/
-├── server.js                 # MCP 服务主文件（STDIO 模式）
-├── server-http.js            # HTTP 服务（Streamable HTTP 模式）
-├── package.json              # 依赖配置
-├── README.md                 # 本文档
-├── knowledge/                # 🆕 组件库知识图谱
-│   ├── common/              # 通用组件库
-│   │   ├── ant-design-pro.md
-│   │   └── element-plus.md
-│   └── business/            # 业务组件库
-│       └── [project-id]/
-│           └── custom-components.md
-└── templates/
-    ├── template-registry.json  # 模板注册表
-    └── examples/               # 🆕 示例代码库
-        ├── react-standard-list/
-        │   ├── sample.md
-        │   ├── hooks.example.ts
-        │   ├── index.example.tsx
-        │   └── components/
-        │       └── EditModal.example.tsx
-        └── react-nonstandard-detail/
-            └── ...
+├── src/                          # v2.0 模块化源码
+│   ├── index.js                  # 统一导出入口
+│   ├── server.js                 # MCP 服务器（STDIO 模式）
+│   ├── server-http.js            # HTTP 服务器
+│   ├── utils/                    # 工具函数
+│   │   ├── logger.js             # 日志工具
+│   │   ├── file.js               # 文件操作
+│   │   └── config.js             # 配置常量
+│   ├── spec/                     # 规范文档相关
+│   ├── matching/                 # 模板匹配相关
+│   │   ├── tech-stack.js         # 技术栈检测
+│   │   ├── matcher.js            # 模板匹配
+│   │   └── knowledge.js          # 知识库/示例
+│   ├── types/                    # 类型检查
+│   └── tools/                    # MCP 工具
+│       ├── definitions.js        # 工具定义
+│       ├── handlers.js           # 工具处理器
+│       ├── prompts.js            # 提示词构建
+│       └── context.js            # 上下文生成
+├── rules/                        # 规则文件（内置）
+│   └── ai-fe-code-std.md
+├── knowledge/                    # 组件库知识图谱
+│   ├── common/
+│   └── business/
+└── templates/                    # 模板数据
+    ├── template-registry.json
+    └── examples/
 ```
 
 ---
@@ -90,19 +99,19 @@ npm install
 
 ### 2. 启动服务
 
-#### STDIO 模式（推荐用于通义灵码等 AI 工具）
+#### HTTP 模式（推荐用于调试和测试）
 
 ```bash
 npm run start
 ```
 
-> **注意**：STDIO 模式不会打印服务地址，这是正常的。AI 工具会自动拉起进程。
-
-#### HTTP 模式（推荐用于需要服务地址的场景）
+#### STDIO 模式（用于 AI 工具集成，如通义灵码）
 
 ```bash
-npm run start:http
+npm run start:stdio
 ```
+
+> **注意**：STDIO 模式不会打印服务地址，这是正常的。AI 工具会自动拉起进程。
 
 启动后会打印：
 

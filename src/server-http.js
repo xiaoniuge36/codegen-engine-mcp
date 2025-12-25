@@ -1,21 +1,14 @@
+/**
+ * AI CodeGen Engine - HTTP 服务器
+ * 使用模块化架构
+ */
 import express from 'express'
+
+// 从模块化源码导入
+import { logger, TOOLS_DEFINITION, handleToolCall } from './index.js'
 
 const app = express()
 const PORT = process.env.PORT || 7331
-
-/**
- * 日志工具
- */
-const logger = {
-  info: (message, data = {}) => {
-    const timestamp = new Date().toISOString()
-    console.log(`[${timestamp}] [INFO] ${message}`, data ? JSON.stringify(data, null, 2) : '')
-  },
-  error: (message, error) => {
-    const timestamp = new Date().toISOString()
-    console.error(`[${timestamp}] [ERROR] ${message}`, error?.message || error)
-  },
-}
 
 app.use(express.json())
 
@@ -30,12 +23,6 @@ app.use((req, res, next) => {
   next()
 })
 
-// 🆕 从核心文件 server.js 导入处理逻辑（统一代码源）
-import {
-  handleCallTool,
-  TOOLS_DEFINITION,
-} from './server.js'
-
 /**
  * MCP HTTP endpoint
  * 支持 MCP 协议的 JSON-RPC 请求
@@ -43,7 +30,7 @@ import {
 app.post('/mcp', async (req, res) => {
   const { method, params, id } = req.body
 
-  logger.info('收到 MCP 请求', { method, id })
+  logger.info('MCP', `收到请求: ${method}`, { id })
 
   try {
     let result
@@ -58,20 +45,28 @@ app.post('/mcp', async (req, res) => {
           },
           serverInfo: {
             name: 'ai-codegen-engine',
-            version: '1.0.0',
+            version: '2.0.0',
           },
         }
-        logger.info('初始化成功')
+        logger.info('MCP', '客户端初始化成功')
+        break
+
+      case 'notifications/initialized':
+        // 客户端通知已初始化完成，无需返回结果
+        result = {}
+        logger.info('MCP', '客户端已就绪')
         break
 
       case 'tools/list':
         result = { tools: TOOLS_DEFINITION }
-        logger.info('列出工具成功', { count: TOOLS_DEFINITION.length })
+        logger.info('MCP', `列出工具: ${TOOLS_DEFINITION.length} 个`)
         break
 
       case 'tools/call':
-        result = await handleCallTool(params)
-        logger.info('调用工具成功', { tool: params?.name })
+        const toolName = params?.name
+        logger.info('MCP', `调用工具: ${toolName}`)
+        result = await handleToolCall(toolName, params?.arguments)
+        logger.info('MCP', `工具执行完成: ${toolName}`)
         break
 
       case 'ping':
@@ -79,6 +74,7 @@ app.post('/mcp', async (req, res) => {
         break
 
       default:
+        logger.warn('MCP', `未知方法: ${method}`)
         throw new Error(`不支持的方法: ${method}`)
     }
 
@@ -89,7 +85,7 @@ app.post('/mcp', async (req, res) => {
       result,
     })
   } catch (error) {
-    logger.error('MCP 请求处理失败', error)
+    logger.error('MCP', `请求处理失败: ${method}`, error)
     res.status(200).json({
       jsonrpc: '2.0',
       id: req.body.id,
@@ -104,11 +100,10 @@ app.post('/mcp', async (req, res) => {
 
 // 健康检查
 app.get('/health', (req, res) => {
-  logger.info('健康检查')
   res.json({
     status: 'ok',
     service: 'AI 代码生成引擎',
-    version: '1.0.0',
+    version: '2.0.0',
     timestamp: new Date().toISOString(),
   })
 })
@@ -117,7 +112,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     service: 'AI 代码生成引擎 (AI CodeGen Engine)',
-    version: '1.0.0',
+    version: '2.0.0',
     description: '智能代码生成服务 - 通过模板匹配、组件库知识图谱和示例代码，提升前端代码生成质量',
     endpoints: {
       mcp: 'POST /mcp - MCP 协议端点',
@@ -134,15 +129,19 @@ app.get('/', (req, res) => {
 })
 
 app.listen(PORT, () => {
-  logger.info(`🚀 AI 代码生成引擎已启动`)
-  logger.info(`📍 服务地址: http://127.0.0.1:${PORT}/mcp`)
-  logger.info(`💚 健康检查: http://127.0.0.1:${PORT}/health`)
-  logger.info(`📖 服务信息: http://127.0.0.1:${PORT}/`)
   console.log('')
-  console.log('✨ 可用功能:')
-  console.log('  - 模板智能匹配')
-  console.log('  - 组件库知识图谱自动注入')
-  console.log('  - 示例代码自动附加')
-  console.log('  - 规范文档快速检索')
+  console.log('🚀 AI 代码生成引擎 v2.0.0')
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log(`📍 MCP 端点:   http://127.0.0.1:${PORT}/mcp`)
+  console.log(`💚 健康检查:   http://127.0.0.1:${PORT}/health`)
+  console.log(`📖 服务信息:   http://127.0.0.1:${PORT}/`)
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log('✨ 可用工具: 15 个')
+  console.log('  - generate_code_context   一键生成代码上下文')
+  console.log('  - check_code_compliance   检查代码规范符合性')
+  console.log('  - detect_tech_stack       检测项目技术栈')
+  console.log('  - smart_match_template    智能匹配模板')
+  console.log('  - get_spec_content        获取规范文档内容')
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('')
 })

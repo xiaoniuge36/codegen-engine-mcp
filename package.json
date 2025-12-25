@@ -1,13 +1,18 @@
 {
   "name": "ai-codegen-engine",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "AI 代码生成引擎 - 智能前端代码生成服务（MCP 协议）",
   "type": "module",
-  "main": "server.js",
+  "main": "src/server.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./server": "./src/server.js",
+    "./http": "./src/server-http.js"
+  },
   "scripts": {
-    "start": "node server-http.js",
-    "start:stdio": "node server.js",
-    "dev": "node --watch server-http.js"
+    "start": "node src/server-http.js",
+    "start:stdio": "node src/server.js",
+    "dev": "node --watch src/server-http.js"
   },
   "keywords": [
     "ai",
