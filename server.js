@@ -87,6 +87,365 @@ function normalizeText(input) {
   return String(input || '').trim().toLowerCase()
 }
 
+/**
+ * 🆕 检测项目技术栈
+ * @param {string} projectPath 项目路径（默认使用 REPO_ROOT 的父目录或当前工作目录）
+ * @returns {object} 技术栈信息
+ */
+function detectTechStack(projectPath = null) {
+  logger.info('detectTechStack', '开始检测项目技术栈', { projectPath })
+  
+  // 尝试多个可能的项目路径
+  const possiblePaths = [
+    projectPath,
+    process.cwd(),
+    path.join(REPO_ROOT, '..'),
+    REPO_ROOT,
+  ].filter(Boolean)
+  
+  let pkgPath = null
+  let pkgContent = null
+  
+  for (const basePath of possiblePaths) {
+    const testPath = path.join(basePath, 'package.json')
+    if (fs.existsSync(testPath)) {
+      try {
+        pkgContent = JSON.parse(fs.readFileSync(testPath, 'utf8'))
+        pkgPath = testPath
+        break
+      } catch (e) {
+        continue
+      }
+    }
+  }
+  
+  if (!pkgContent) {
+    logger.warn('detectTechStack', '未找到 package.json，无法检测技术栈')
+    return {
+      detected: false,
+      techStack: 'unknown',
+      framework: null,
+      uiLibrary: null,
+      buildTool: null,
+      packagePath: null
+    }
+  }
+  
+  logger.info('detectTechStack', `找到 package.json: ${pkgPath}`)
+  
+  const deps = {
+    ...pkgContent.dependencies,
+    ...pkgContent.devDependencies,
+  }
+  
+  const result = {
+    detected: true,
+    techStack: 'unknown',
+    framework: null,
+    uiLibrary: null,
+    buildTool: null,
+    isTypeScript: false,
+    packagePath: pkgPath,
+    projectName: pkgContent.name || 'unknown'
+  }
+  
+  // 检测框架
+  if (deps['react'] || deps['react-dom']) {
+    result.techStack = 'react'
+    result.framework = 'react'
+    if (deps['next']) result.framework = 'next'
+    if (deps['umi'] || deps['@umijs/max']) result.framework = 'umi'
+  } else if (deps['vue']) {
+    const vueVersion = deps['vue']
+    if (vueVersion?.startsWith('^3') || vueVersion?.startsWith('3') || vueVersion?.includes('next')) {
+      result.techStack = 'vue3'
+      result.framework = 'vue3'
+    } else {
+      result.techStack = 'vue2'
+      result.framework = 'vue2'
+    }
+    if (deps['nuxt'] || deps['nuxt3']) result.framework = 'nuxt'
+  }
+  
+  // 检测 UI 库
+  if (deps['antd'] || deps['@ant-design/pro-components']) {
+    result.uiLibrary = 'antd'
+  } else if (deps['element-plus']) {
+    result.uiLibrary = 'element-plus'
+  } else if (deps['element-ui']) {
+    result.uiLibrary = 'element-ui'
+  } else if (deps['vant']) {
+    result.uiLibrary = 'vant'
+  } else if (deps['@arco-design/web-react'] || deps['@arco-design/web-vue']) {
+    result.uiLibrary = 'arco-design'
+  }
+  
+  // 检测构建工具
+  if (deps['vite']) {
+    result.buildTool = 'vite'
+  } else if (deps['webpack'] || deps['@vue/cli-service'] || deps['react-scripts']) {
+    result.buildTool = 'webpack'
+  }
+  
+  // 检测 TypeScript
+  if (deps['typescript']) {
+    result.isTypeScript = true
+  }
+  
+  logger.info('detectTechStack', '技术栈检测完成', result)
+  return result
+}
+
+/**
+ * 🆕 从项目中查找相似组件（兜底规则）
+ * @param {string} searchText 搜索文本
+ * @param {string} projectPath 项目路径
+ * @param {string} techStack 技术栈
+ * @returns {object[]} 匹配的组件列表
+ */
+function findSimilarComponents(searchText, projectPath = null, techStack = null) {
+  logger.info('findSimilarComponents', '开始查找项目中的相似组件', { searchText, projectPath, techStack })
+  
+  const basePaths = [
+    projectPath,
+    process.cwd(),
+    path.join(REPO_ROOT, '..'),
+  ].filter(Boolean)
+  
+  const results = []
+  const searchLower = normalizeText(searchText)
+  
+  // 需要搜索的目录
+  const searchDirs = [
+    'src/components',
+    'src/pages',
+    'src/views',
+    'components',
+    'pages',
+    'views',
+  ]
+  
+  // 根据技术栈确定文件扩展名
+  const extensions = []
+  if (!techStack || techStack === 'react') {
+    extensions.push('.tsx', '.jsx', '.ts', '.js')
+  }
+  if (!techStack || techStack.startsWith('vue')) {
+    extensions.push('.vue')
+  }
+  
+  // 关键词匹配权重
+  const keywordPatterns = [
+    { pattern: /upload|uploader/i, weight: 10, label: '上传' },
+    { pattern: /file|attachment/i, weight: 8, label: '文件' },
+    { pattern: /image|img|photo/i, weight: 6, label: '图片' },
+    { pattern: /list|table/i, weight: 5, label: '列表' },
+    { pattern: /form|edit|add/i, weight: 5, label: '表单' },
+    { pattern: /modal|dialog|drawer/i, weight: 4, label: '弹窗' },
+    { pattern: /detail|view/i, weight: 4, label: '详情' },
+    { pattern: /import|export/i, weight: 6, label: '导入导出' },
+  ]
+  
+  for (const basePath of basePaths) {
+    for (const searchDir of searchDirs) {
+      const fullDir = path.join(basePath, searchDir)
+      
+      if (!fs.existsSync(fullDir)) continue
+      
+      try {
+        const files = walkDirectory(fullDir, extensions, 3) // 最多递归3层
+        
+        for (const file of files) {
+          const fileName = path.basename(file).toLowerCase()
+          const relativePath = path.relative(basePath, file)
+          
+          let score = 0
+          const matchedLabels = []
+          
+          // 基于文件名匹配关键词
+          for (const { pattern, weight, label } of keywordPatterns) {
+            if (pattern.test(fileName) || pattern.test(relativePath)) {
+              score += weight
+              matchedLabels.push(label)
+            }
+          }
+          
+          // 基于搜索文本匹配
+          if (searchLower) {
+            const searchWords = searchLower.split(/\s+/).filter(Boolean)
+            for (const word of searchWords) {
+              if (fileName.includes(word) || relativePath.toLowerCase().includes(word)) {
+                score += 5
+              }
+            }
+          }
+          
+          if (score > 0) {
+            results.push({
+              path: relativePath,
+              fullPath: file,
+              score,
+              matchedLabels,
+              fileName: path.basename(file),
+            })
+          }
+        }
+      } catch (e) {
+        logger.warn('findSimilarComponents', `扫描目录失败: ${fullDir}`, { error: e.message })
+      }
+    }
+  }
+  
+  // 按分数排序并去重
+  const uniqueResults = []
+  const seenPaths = new Set()
+  
+  results
+    .sort((a, b) => b.score - a.score)
+    .forEach(r => {
+      if (!seenPaths.has(r.path)) {
+        seenPaths.add(r.path)
+        uniqueResults.push(r)
+      }
+    })
+  
+  logger.info('findSimilarComponents', `找到 ${uniqueResults.length} 个相似组件`)
+  return uniqueResults.slice(0, 10) // 最多返回10个
+}
+
+/**
+ * 递归遍历目录
+ */
+function walkDirectory(dir, extensions, maxDepth, currentDepth = 0) {
+  if (currentDepth > maxDepth) return []
+  
+  const results = []
+  
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true })
+    
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name)
+      
+      // 跳过 node_modules 和隐藏目录
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+      
+      if (entry.isDirectory()) {
+        results.push(...walkDirectory(fullPath, extensions, maxDepth, currentDepth + 1))
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase()
+        if (extensions.includes(ext)) {
+          results.push(fullPath)
+        }
+      }
+    }
+  } catch (e) {
+    // 忽略权限错误等
+  }
+  
+  return results
+}
+
+/**
+ * 🆕 带技术栈的智能模板匹配
+ * @param {string} text 需求文本
+ * @param {object[]} templates 模板列表
+ * @param {object} techStackInfo 技术栈信息
+ * @param {string} projectPath 项目路径（用于兜底查找）
+ * @returns {object} 匹配结果
+ */
+function smartMatchTemplate(text, templates, techStackInfo = null, projectPath = null) {
+  logger.info('smartMatchTemplate', '开始智能匹配模板', { text: text?.substring(0, 100), techStack: techStackInfo?.techStack })
+  
+  const normalized = normalizeText(text)
+  
+  // 对每个模板评分，考虑技术栈
+  const scored = templates.map(tpl => {
+    const baseResult = scoreTemplate(normalized, tpl)
+    let score = baseResult.score
+    const boosts = []
+    
+    // 技术栈匹配加分
+    if (techStackInfo?.detected && tpl.techStack) {
+      const projTech = techStackInfo.techStack.toLowerCase()
+      const tplTech = tpl.techStack.toLowerCase()
+      
+      if (projTech === tplTech) {
+        score += 10
+        boosts.push(`技术栈完全匹配: ${tplTech}`)
+      } else if (
+        (projTech === 'vue2' && tplTech === 'vue') ||
+        (projTech === 'vue3' && tplTech === 'vue') ||
+        (projTech.startsWith('vue') && tplTech.startsWith('vue'))
+      ) {
+        score += 5
+        boosts.push(`技术栈部分匹配: ${tplTech}`)
+      } else if (projTech !== tplTech) {
+        // 技术栈不匹配扣分
+        score -= 15
+        boosts.push(`技术栈不匹配: 项目=${projTech}, 模板=${tplTech}`)
+      }
+    }
+    
+    // UI 库匹配加分
+    if (techStackInfo?.uiLibrary && tpl.keywords) {
+      const uiLib = techStackInfo.uiLibrary.toLowerCase()
+      const hasUIKeyword = tpl.keywords.some(k => 
+        String(k).toLowerCase().includes(uiLib) ||
+        (uiLib === 'antd' && String(k).toLowerCase().includes('ant')) ||
+        (uiLib === 'element-plus' && String(k).toLowerCase().includes('element')) ||
+        (uiLib === 'element-ui' && String(k).toLowerCase().includes('element'))
+      )
+      if (hasUIKeyword) {
+        score += 3
+        boosts.push(`UI库匹配: ${uiLib}`)
+      }
+    }
+    
+    return {
+      id: tpl.id,
+      name: tpl.name,
+      techStack: tpl.techStack,
+      score,
+      baseScore: baseResult.score,
+      hits: baseResult.hits,
+      antiHits: baseResult.antiHits,
+      boosts,
+    }
+  })
+  
+  // 按分数排序
+  scored.sort((a, b) => b.score - a.score)
+  
+  const chosen = scored[0]
+  
+  // 如果最高分太低，尝试兜底查找
+  let fallbackResults = null
+  if (chosen.score < 3 && projectPath) {
+    logger.info('smartMatchTemplate', '模板匹配分数过低，尝试兜底查找项目中的相似组件')
+    fallbackResults = findSimilarComponents(text, projectPath, techStackInfo?.techStack)
+  }
+  
+  const result = {
+    techStackInfo,
+    top: scored.slice(0, 5),
+    chosen: chosen.score >= 3 ? chosen : null,
+    fallbackUsed: chosen.score < 3,
+    fallbackResults,
+    recommendation: chosen.score < 3 
+      ? '未找到高匹配度的模板，建议参考项目中的相似组件或提供更多需求关键词'
+      : `推荐使用模板: ${chosen.name}`
+  }
+  
+  logger.info('smartMatchTemplate', '智能匹配完成', { 
+    chosenId: result.chosen?.id, 
+    chosenScore: result.chosen?.score,
+    fallbackUsed: result.fallbackUsed 
+  })
+  
+  return result
+}
+
 function scoreTemplate(text, tpl) {
   const keywords = Array.isArray(tpl.keywords) ? tpl.keywords : []
   const antiKeywords = Array.isArray(tpl.antiKeywords) ? tpl.antiKeywords : []
@@ -489,6 +848,150 @@ function promptSkeletonByKey(key, requirementText) {
 `
   }
 
+  if (key === 'vue2H5FileUpload') {
+    return `任务标准：ai-fe-code-std.md 为标准执行任务
+
+一句话需求：${requirement}
+
+组件类型：Vue2 H5 文件上传组件（Vant Uploader）
+
+文件夹名称: components/file-upload
+
+参考模板：templates/examples/vue2-h5-file-upload/
+
+组件需求：
+- 基于 Vant Uploader 封装
+- 支持单文件/多文件上传
+- 支持图片水印（地理位置、天气、时间、拍摄人）
+- 支持文件格式限制和大小限制
+- 支持多种文件预览（图片/视频/文档）
+- 支持两种展示模式：grid（网格）/ list（列表）
+
+Props 配置：
+- resultItem：文件配置对象（fileFormat/fileUpperLimit/uploadList）
+- maxCount：最大上传数量
+- isSubmit：是否为提交态（隐藏操作按钮）
+- displayMode：展示模式 grid/list
+- originalFile：是否保留原文件
+
+依赖：
+- vant >= 4.0（Uploader/ImagePreview/Icon/Dialog）
+- html2canvas（水印功能）
+- compressorjs（图片压缩）
+- pinia（水印数据状态管理）
+
+强制要求：
+- 上传逻辑封装在 uploadFileAction 函数
+- 水印处理使用独立的 WaterMark 组件
+- 文件类型图标映射使用 loadIcon.js
+- 禁止残留 console.log/debugger
+`
+  }
+
+  if (key === 'vue2PcFileUpload') {
+    return `任务标准：ai-fe-code-std.md 为标准执行任务
+
+一句话需求：${requirement}
+
+组件类型：Vue2/3 PC 文件上传组件（Element Upload）
+
+文件夹名称: components/file-upload
+
+参考模板：templates/examples/vue2-pc-file-upload/
+
+组件需求：
+- 基于 Element Upload 封装
+- 支持自定义上传进度显示
+- 支持文件格式限制和大小限制
+- 支持 picture-card 展示模式
+- 支持图片/视频/文档类型判断和展示
+
+Props 配置：
+- uploadUrl：上传接口地址
+- maxCount：最大上传数量
+- maxSize：单文件最大大小（MB）
+- acceptTypes：允许的文件类型数组
+- progressColor：进度条颜色
+- uploadTip：上传提示文案
+- listType：列表展示类型
+
+Events 事件：
+- success：上传成功
+- remove：文件移除
+- change：文件列表变化
+
+依赖：
+- element-plus 或 element-ui
+- axios（自定义上传请求）
+
+强制要求：
+- 使用 http-request 自定义上传逻辑
+- 上传前校验文件类型和大小
+- 支持进度条展示
+- 暴露 fileList 供父组件获取
+- 禁止残留 console.log/debugger
+`
+  }
+
+  if (key === 'reactPcFileUpload') {
+    return `任务标准：ai-fe-code-std.md 为标准执行任务
+
+一句话需求：${requirement}
+
+组件类型：React PC 文件上传组件（Ant Design Upload）
+
+文件夹名称: components/FileUpload
+
+参考模板：templates/examples/react-pc-file-upload/
+
+组件需求：
+- 基于 Ant Design Upload 封装
+- 支持自定义上传进度显示
+- 支持文件格式限制和大小限制
+- 支持 picture-card / text / picture 展示模式
+- 支持图片/视频/文档类型判断和展示
+
+Props 配置（TypeScript 接口）：
+- uploadUrl: string - 上传接口地址
+- maxCount: number - 最大上传数量
+- maxSize: number - 单文件最大大小（MB）
+- acceptTypes: string[] - 允许的文件类型（MIME 类型）
+- progressColor: string - 进度条颜色
+- uploadType: string | number - 业务类型标识
+- uploadTip: string - 上传提示文案
+- uploadBtnText: string - 上传按钮文案
+- listType: 'picture-card' | 'text' | 'picture' - 列表展示类型
+- disabled: boolean - 是否禁用
+- defaultFileList: UploadFile[] - 初始文件列表
+- headers: Record<string, string> - 自定义请求头
+- extraData: Record<string, any> - 额外的上传参数
+
+Events 回调：
+- onSuccess: (file, response) => void - 上传成功
+- onRemove: (file) => void - 文件移除
+- onChange: (fileList) => void - 文件列表变化
+
+暴露方法（通过 ref）：
+- getFileList() - 获取文件列表
+- setFileList(list) - 设置文件列表
+- clearFileList() - 清空文件列表
+
+依赖：
+- antd >= 4.x 或 >= 5.x
+- axios（自定义上传请求）
+- @ant-design/icons
+
+强制要求（P0）：
+- 必须先生成 hooks/useFileUpload.ts（封装上传逻辑）
+- 使用 customRequest 自定义上传逻辑
+- 上传前校验文件类型和大小（beforeUpload）
+- 支持进度条展示
+- 使用 forwardRef + useImperativeHandle 暴露方法
+- 完整的 TypeScript 类型定义
+- 禁止残留 console.log/debugger
+`
+  }
+
   return `任务标准：ai-fe-code-std.md 为标准执行任务
 一句话需求：${requirement}
 `
@@ -769,6 +1272,43 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
           },
           required: [],
+        },
+      },
+      {
+        name: 'detect_tech_stack',
+        description: '🆕 检测项目技术栈（自动识别 React/Vue2/Vue3 及 UI 库）',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            projectPath: { type: 'string', description: '项目路径（可选，默认自动检测）' },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'smart_match_template',
+        description: '🆕 智能匹配模板（自动检测技术栈 + 基于需求匹配 + 兜底查找项目组件）',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: '需求描述' },
+            projectPath: { type: 'string', description: '项目路径（可选，用于技术栈检测和兜底查找）' },
+            topK: { type: 'number', default: 5, description: '返回前K个匹配结果' },
+          },
+          required: ['text'],
+        },
+      },
+      {
+        name: 'find_similar_components',
+        description: '🆕 从项目中查找相似组件（兜底规则，当模板匹配失败时使用）',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            searchText: { type: 'string', description: '搜索关键词' },
+            projectPath: { type: 'string', description: '项目路径（可选）' },
+            techStack: { type: 'string', enum: ['react', 'vue2', 'vue3', 'vue'], description: '技术栈过滤（可选）' },
+          },
+          required: ['searchText'],
         },
       },
     ],
@@ -1061,6 +1601,121 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     }
 
+    // 🆕 检测项目技术栈
+    if (name === 'detect_tech_stack') {
+      const input = z.object({
+        projectPath: z.string().optional(),
+      }).parse(args)
+      
+      logger.info('detect_tech_stack', '检测项目技术栈', input)
+      
+      const result = detectTechStack(input.projectPath)
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      }
+    }
+
+    // 🆕 智能匹配模板
+    if (name === 'smart_match_template') {
+      const input = z.object({
+        text: z.string(),
+        projectPath: z.string().optional(),
+        topK: z.number().int().min(1).max(10).default(5),
+      }).parse(args)
+      
+      logger.info('smart_match_template', '智能匹配模板', { text: input.text?.substring(0, 100) })
+      
+      // 先检测技术栈
+      const techStackInfo = detectTechStack(input.projectPath)
+      
+      // 提取明确的模板ID
+      const explicit = extractExplicitTemplateId(input.text, templates)
+      
+      if (explicit.templateId) {
+        // 如果明确指定了模板ID，直接使用
+        const tpl = templates.find(t => t.id === explicit.templateId)
+        if (tpl) {
+          logger.info('smart_match_template', `使用明确指定的模板: ${tpl.name}`)
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  techStackInfo,
+                  explicitTemplateId: explicit.templateId,
+                  requirementText: explicit.restText,
+                  chosen: { id: tpl.id, name: tpl.name, techStack: tpl.techStack, score: 999 },
+                  top: [{ id: tpl.id, name: tpl.name, techStack: tpl.techStack, score: 999 }],
+                  fallbackUsed: false,
+                  recommendation: `使用明确指定的模板: ${tpl.name}`
+                }, null, 2)
+              }
+            ]
+          }
+        }
+      }
+      
+      // 智能匹配
+      const result = smartMatchTemplate(
+        explicit.restText || input.text, 
+        templates, 
+        techStackInfo, 
+        input.projectPath
+      )
+      
+      // 限制返回数量
+      result.top = result.top.slice(0, input.topK)
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      }
+    }
+
+    // 🆕 从项目中查找相似组件
+    if (name === 'find_similar_components') {
+      const input = z.object({
+        searchText: z.string(),
+        projectPath: z.string().optional(),
+        techStack: z.enum(['react', 'vue2', 'vue3', 'vue']).optional(),
+      }).parse(args)
+      
+      logger.info('find_similar_components', '查找项目中的相似组件', input)
+      
+      const results = findSimilarComponents(
+        input.searchText,
+        input.projectPath,
+        input.techStack
+      )
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              searchText: input.searchText,
+              techStack: input.techStack,
+              resultCount: results.length,
+              results,
+              suggestion: results.length > 0 
+                ? `找到 ${results.length} 个相似组件，可以参考这些组件进行开发`
+                : '未找到相似组件，建议使用模板生成新组件'
+            }, null, 2)
+          }
+        ]
+      }
+    }
+
     logger.error('CallTool', `未知工具: ${name}`)
     return { content: [{ type: 'text', text: `Unknown tool: ${name}` }] }
     
@@ -1201,6 +1856,74 @@ export async function handleCallTool(params) {
     return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
   }
 
+  // detect_tech_stack
+  if (name === 'detect_tech_stack') {
+    const input = z.object({ projectPath: z.string().optional() }).parse(args)
+    const result = detectTechStack(input.projectPath)
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  }
+
+  // smart_match_template
+  if (name === 'smart_match_template') {
+    const input = z.object({
+      text: z.string(),
+      projectPath: z.string().optional(),
+      topK: z.number().int().min(1).max(10).default(5),
+    }).parse(args)
+    
+    const techStackInfo = detectTechStack(input.projectPath)
+    const explicit = extractExplicitTemplateId(input.text, templates)
+    
+    if (explicit.templateId) {
+      const tpl = templates.find(t => t.id === explicit.templateId)
+      if (tpl) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              techStackInfo,
+              explicitTemplateId: explicit.templateId,
+              requirementText: explicit.restText,
+              chosen: { id: tpl.id, name: tpl.name, techStack: tpl.techStack, score: 999 },
+              top: [{ id: tpl.id, name: tpl.name, techStack: tpl.techStack, score: 999 }],
+              fallbackUsed: false,
+              recommendation: `使用明确指定的模板: ${tpl.name}`
+            }, null, 2)
+          }]
+        }
+      }
+    }
+    
+    const result = smartMatchTemplate(explicit.restText || input.text, templates, techStackInfo, input.projectPath)
+    result.top = result.top.slice(0, input.topK)
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  }
+
+  // find_similar_components
+  if (name === 'find_similar_components') {
+    const input = z.object({
+      searchText: z.string(),
+      projectPath: z.string().optional(),
+      techStack: z.enum(['react', 'vue2', 'vue3', 'vue']).optional(),
+    }).parse(args)
+    
+    const results = findSimilarComponents(input.searchText, input.projectPath, input.techStack)
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          searchText: input.searchText,
+          techStack: input.techStack,
+          resultCount: results.length,
+          results,
+          suggestion: results.length > 0 
+            ? `找到 ${results.length} 个相似组件，可以参考这些组件进行开发`
+            : '未找到相似组件，建议使用模板生成新组件'
+        }, null, 2)
+      }]
+    }
+  }
+
   throw new Error(`Unknown tool: ${name}`)
 }
 
@@ -1218,6 +1941,9 @@ export const TOOLS_DEFINITION = [
   { name: 'sync_template', description: '同步模板到注册表', inputSchema: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, paths: { type: 'array' }, scenes: { type: 'array' }, keywords: { type: 'array' }, antiKeywords: { type: 'array' }, promptTemplateKey: { type: 'string' }, componentScope: { type: 'string' } }, required: ['id', 'name'] } },
   { name: 'sync_knowledge', description: '同步知识图谱', inputSchema: { type: 'object', properties: { scope: { type: 'string' }, fileName: { type: 'string' }, content: { type: 'string' } }, required: ['fileName', 'content'] } },
   { name: 'batch_sync', description: '批量同步模板和知识图谱', inputSchema: { type: 'object', properties: { template: { type: 'object' }, knowledgeUpdates: { type: 'array' } }, required: [] } },
+  { name: 'detect_tech_stack', description: '🆕 检测项目技术栈（自动识别 React/Vue2/Vue3 及 UI 库）', inputSchema: { type: 'object', properties: { projectPath: { type: 'string', description: '项目路径（可选）' } }, required: [] } },
+  { name: 'smart_match_template', description: '🆕 智能匹配模板（自动检测技术栈 + 基于需求匹配 + 兜底查找项目组件）', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '需求描述' }, projectPath: { type: 'string', description: '项目路径（可选）' }, topK: { type: 'number', default: 5 } }, required: ['text'] } },
+  { name: 'find_similar_components', description: '🆕 从项目中查找相似组件（兜底规则）', inputSchema: { type: 'object', properties: { searchText: { type: 'string' }, projectPath: { type: 'string' }, techStack: { type: 'string', enum: ['react', 'vue2', 'vue3', 'vue'] } }, required: ['searchText'] } },
 ]
 
 async function mainStdio() {
