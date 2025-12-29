@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { logger, readJson, REGISTRY_PATH } from '../utils/index.js'
+import { logger, readJson, REGISTRY_PATH, recordToolCall, recordTemplateUsage, recordTechStackDetection, getStatsSummary } from '../utils/index.js'
 import { resolveSpecPath, searchSpecLines, getSpecContent, buildSpecCandidates } from '../spec/index.js'
 import { 
   detectTechStack, 
@@ -8,17 +8,24 @@ import {
   extractExplicitTemplateId,
   scoreTemplate,
   getComponentKnowledge,
-  getCodeExamples
+  getCodeExamples,
+  analyzeProjectStructure,
+  suggestFilePaths,
+  detectCodeStyle
 } from '../matching/index.js'
 import { checkGlobalTypes, parseApiTypes, checkCodeCompliance } from '../types/index.js'
 import { generateCodeContext } from './context.js'
 import { buildEnhancedPrompt } from './prompts.js'
+import { quickGenerate } from './quick-generate.js'
 
 /**
  * 处理工具调用
  */
 export async function handleToolCall(name, args) {
   logger.info('handleToolCall', `工具调用: ${name}`, args)
+  
+  // 记录工具调用统计
+  recordToolCall(name)
   
   const registry = readJson(REGISTRY_PATH)
   const templates = registry.templates || []
@@ -250,6 +257,88 @@ export async function handleToolCall(name, args) {
     }).parse(args)
     
     const result = checkCodeCompliance(input.generatedFiles, input.projectPath)
+    return { 
+      content: [{ 
+        type: 'text', 
+        text: JSON.stringify(result, null, 2) 
+      }] 
+    }
+  }
+
+  // quick_generate
+  if (name === 'quick_generate') {
+    const input = z.object({
+      text: z.string().min(1),
+      projectPath: z.string().optional(),
+    }).parse(args)
+    
+    const result = quickGenerate(input.text, input.projectPath)
+    
+    // 记录模板使用
+    if (result.summary?.matchedTemplate) {
+      recordTemplateUsage(result.summary.matchedTemplate, true)
+    }
+    // 记录技术栈检测
+    if (result.summary?.techStack) {
+      recordTechStackDetection(result.summary.techStack, result.techStack?.projectName)
+    }
+    
+    return { 
+      content: [{ 
+        type: 'text', 
+        text: JSON.stringify(result, null, 2) 
+      }] 
+    }
+  }
+
+  // get_stats
+  if (name === 'get_stats') {
+    const stats = getStatsSummary()
+    return { 
+      content: [{ 
+        type: 'text', 
+        text: JSON.stringify(stats, null, 2) 
+      }] 
+    }
+  }
+
+  // analyze_project
+  if (name === 'analyze_project') {
+    const input = z.object({
+      projectPath: z.string().optional(),
+      moduleName: z.string().optional(),
+    }).parse(args)
+    
+    // 分析项目结构
+    const projectContext = analyzeProjectStructure(input.projectPath)
+    
+    // 检测代码风格
+    const codeStyle = detectCodeStyle(input.projectPath)
+    
+    // 生成推荐路径（如果提供了模块名）
+    let fileSuggestions = null
+    if (projectContext.analyzed && input.moduleName) {
+      // 检测技术栈以确定文件扩展名
+      const techStack = detectTechStack(input.projectPath)
+      fileSuggestions = suggestFilePaths(projectContext, input.moduleName, techStack.techStack)
+    }
+    
+    const result = {
+      projectContext,
+      codeStyle,
+      fileSuggestions,
+      summary: {
+        analyzed: projectContext.analyzed,
+        directories: projectContext.directories,
+        routerType: projectContext.routerType,
+        stateManagement: projectContext.stateManagement,
+        hasPrettier: codeStyle.prettier?.found,
+        hasEslint: codeStyle.eslint?.found,
+        hasTypeScript: codeStyle.typescript?.found,
+        tsStrict: codeStyle.typescript?.strict
+      }
+    }
+    
     return { 
       content: [{ 
         type: 'text', 

@@ -1,6 +1,6 @@
 {
   "name": "ai-codegen-engine",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "AI 代码生成引擎 - 智能前端代码生成服务（MCP 协议）",
   "type": "module",
   "main": "src/server.js",

@@ -1,20 +1,53 @@
 /**
- * MCP 工具定义
+ * MCP 工具定义 - AI 代码生成引擎
+ * 
+ * ⚠️⚠️⚠️ 最高优先级规则（必须遵守）⚠️⚠️⚠️
+ * 
+ * 【规则文件】rules/ai-fe-code-std.md 是代码生成的绝对标准
+ * 【强制要求】生成任何代码前，必须严格遵守规则文件中的所有约束
+ * 【包括但不限于】目录结构、文件命名、代码风格、hooks 生成顺序等
+ * 
+ * ⭐⭐⭐ 强制调用顺序（必须遵守）⭐⭐⭐
+ * 
+ * 步骤1️⃣ 调用 quick_generate 或分步调用：
+ *   - detect_tech_stack → check_global_types → smart_match_template
+ *   - → get_code_examples → get_spec_content
+ * 
+ * 步骤2️⃣ 根据返回的模板和示例生成代码（严格遵守规则）
+ * 
+ * 步骤3️⃣ 【必须】调用 check_code_compliance 检查代码
+ * 
+ * 调用流程图：
+ * quick_generate → 生成代码 → check_code_compliance
+ *       ↓                              ↑
+ *   必须遵守规则 ←←←←←←←←←←←←←←←←
  */
 export const TOOLS_DEFINITION = [
   { 
+    name: 'quick_generate', 
+    description: '【1️⃣ 第一步 - 必须首先调用】代码生成的默认入口。用户说“生成代码/做页面/创建组件”时必须先调用。自动执行：检测技术栈→检查全局类型→匹配模板→获取示例→读取规则。【下一步】根据返回结果生成代码，【最后一步】必须调用 check_code_compliance 检查。', 
+    inputSchema: { 
+      type: 'object', 
+      properties: { 
+        text: { type: 'string', description: '用户需求描述（直接传入用户说的原话）' }, 
+        projectPath: { type: 'string', description: '用户当前打开的文件路径（优先使用 IDE 当前打开的文件）' } 
+      }, 
+      required: ['text'] 
+    } 
+  },
+  { 
     name: 'list_templates', 
-    description: '列出模板注册表中的所有模板', 
+    description: '列出模板注册表中的所有模板。下一步：调用 get_template 获取具体模板详情', 
     inputSchema: { type: 'object', properties: {}, required: [] } 
   },
   { 
     name: 'get_template', 
-    description: '根据模板 ID 获取模板元数据', 
+    description: '根据模板 ID 获取模板元数据。下一步：调用 get_code_examples 获取示例代码', 
     inputSchema: { type: 'object', properties: { id: { type: 'string', description: '模板 ID' } }, required: ['id'] } 
   },
   { 
     name: 'match_template', 
-    description: '根据一句话需求匹配最合适的模板', 
+    description: '根据一句话需求匹配最合适的模板。下一步：调用 get_code_examples 获取匹配模板的示例代码', 
     inputSchema: { type: 'object', properties: { text: { type: 'string', description: '需求描述或模板ID' }, topK: { type: 'number', default: 3, description: '返回前K个匹配结果' } }, required: ['text'] } 
   },
   { 
@@ -29,7 +62,7 @@ export const TOOLS_DEFINITION = [
   },
   { 
     name: 'get_code_examples', 
-    description: '获取模板的示例代码', 
+    description: '获取模板的示例代码。下一步：根据示例代码生成业务代码，完成后调用 check_code_compliance', 
     inputSchema: { type: 'object', properties: { templateId: { type: 'string' } }, required: ['templateId'] } 
   },
   { 
@@ -39,18 +72,18 @@ export const TOOLS_DEFINITION = [
   },
   { 
     name: 'get_spec_content', 
-    description: '【⭐推荐首先调用】获取规范文档内容。规则文件已内置，调用后必须严格按照规则执行代码生成任务。', 
+    description: '【⭐⭐⭐ 最高优先级 - 必须遵守】获取规范文档内容（ai-fe-code-std.md）。⚠️ 强制要求：生成任何代码前必须获取并严格遵守规则，包括目录结构、文件命名、代码风格等。规则是代码生成的绝对标准，不可违反。', 
     inputSchema: { type: 'object', properties: { specPath: { type: 'string' }, projectPath: { type: 'string', description: '用户项目路径' }, section: { type: 'string' } }, required: [] } 
   },
   { 
     name: 'detect_tech_stack', 
-    description: '检测项目技术栈（自动识别 React/Vue2/Vue3 及 UI 库）', 
-    inputSchema: { type: 'object', properties: { projectPath: { type: 'string', description: '项目路径（可选）' } }, required: [] } 
+    description: '检测项目技术栈（自动识别 React/Vue2/Vue3 及 UI 库）。⚠️ 重要：请传入项目中任意文件的路径。下一步：调用 smart_match_template 根据技术栈匹配模板', 
+    inputSchema: { type: 'object', properties: { projectPath: { type: 'string', description: '⭐ 项目中任意文件或目录的路径（如 /path/to/project/package.json 或 /path/to/project/src/App.tsx）' } }, required: [] } 
   },
   { 
     name: 'smart_match_template', 
-    description: '智能匹配模板（自动检测技术栈 + 基于需求匹配 + 兜底查找项目组件）', 
-    inputSchema: { type: 'object', properties: { text: { type: 'string', description: '需求描述' }, projectPath: { type: 'string', description: '项目路径（可选）' }, topK: { type: 'number', default: 5 } }, required: ['text'] } 
+    description: '智能匹配模板（自动检测技术栈 + 基于需求匹配 + 兜底查找项目组件）。下一步：调用 get_code_examples 获取匹配模板的示例代码', 
+    inputSchema: { type: 'object', properties: { text: { type: 'string', description: '需求描述' }, projectPath: { type: 'string', description: '⭐ 项目中任意文件的路径' }, topK: { type: 'number', default: 5 } }, required: ['text'] } 
   },
   { 
     name: 'find_similar_components', 
@@ -59,7 +92,7 @@ export const TOOLS_DEFINITION = [
   },
   { 
     name: 'check_global_types', 
-    description: '检查项目全局类型声明（避免重复引入）', 
+    description: '【⭐ 重要】检查项目全局类型声明。⚠️ 生成代码前必须检查，避免重复 import 全局类型。返回的全局类型【绝对不要 import】。', 
     inputSchema: { type: 'object', properties: { projectPath: { type: 'string' } }, required: [] } 
   },
   { 
@@ -74,8 +107,25 @@ export const TOOLS_DEFINITION = [
   },
   { 
     name: 'check_code_compliance', 
-    description: '【⭐ 生成代码后必须调用】检查生成的代码是否符合规范，输出自检报告。', 
+    description: '【3️⃣ 最后一步 - 必须调用】生成代码后必须调用此工具检查规范符合性。⚠️ 跳过此步骤将导致代码质量问题。检查项：hooks文件顺序、类型定义、文件结构等。', 
     inputSchema: { type: 'object', properties: { generatedFiles: { type: 'array', items: { type: 'string' }, description: '已生成的文件路径列表' }, projectPath: { type: 'string' } }, required: ['generatedFiles'] } 
+  },
+  { 
+    name: 'get_stats', 
+    description: '获取工具使用统计（工具调用次数、模板使用排名、技术栈分布）', 
+    inputSchema: { type: 'object', properties: {}, required: [] } 
+  },
+  { 
+    name: 'analyze_project', 
+    description: '分析项目结构和代码风格配置。返回：目录结构、路由类型、状态管理、Prettier/ESLint/TypeScript 配置、推荐文件路径。', 
+    inputSchema: { 
+      type: 'object', 
+      properties: { 
+        projectPath: { type: 'string', description: '项目中任意文件的路径' },
+        moduleName: { type: 'string', description: '要创建的模块名称（可选，用于生成推荐路径）' }
+      }, 
+      required: [] 
+    } 
   },
 ]
 

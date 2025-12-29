@@ -20,11 +20,13 @@ const ListPage: React.FC = () => {
     {
       title: '姓名',
       dataIndex: 'name',
+      width: 120,
       fieldProps: { placeholder: '请输入姓名' },
     },
     {
       title: '类型',
       dataIndex: 'type',
+      width: 100,
       valueType: 'select',
       valueEnum: {
         1: { text: '类型1', status: 'Default' },
@@ -34,12 +36,15 @@ const ListPage: React.FC = () => {
     {
       title: '创建时间',
       dataIndex: 'createTime',
+      width: 180,
       valueType: 'dateTime',
       search: false,
     },
     {
       title: '操作',
       valueType: 'option',
+      width: 120,
+      fixed: 'right',
       render: (_, record) => [
         <a key="edit" onClick={() => handleEdit(record.id)}>编辑</a>,
         <a key="delete" onClick={() => handleDelete(record.id)}>删除</a>,

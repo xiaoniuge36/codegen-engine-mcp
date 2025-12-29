@@ -36,16 +36,19 @@ const ProjectDetail: React.FC = () => {
       title: '审批节点',
       dataIndex: 'nodeName',
       key: 'nodeName',
+      width: 120,
     },
     {
       title: '审批人',
       dataIndex: 'approverName',
       key: 'approverName',
+      width: 100,
     },
     {
       title: '审批结果',
       dataIndex: 'result',
       key: 'result',
+      width: 100,
       render: (result: string) => {
         const statusMap: Record<string, { color: string; text: string }> = {
           approved: { color: 'success', text: '已通过' },
@@ -60,12 +63,14 @@ const ProjectDetail: React.FC = () => {
       title: '审批意见',
       dataIndex: 'comment',
       key: 'comment',
+      width: 200,
       ellipsis: true,
     },
     {
       title: '审批时间',
       dataIndex: 'approvalTime',
       key: 'approvalTime',
+      width: 180,
     },
   ];
 

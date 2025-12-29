@@ -1,5 +1,5 @@
-import { logger, readJson, REGISTRY_PATH } from '../utils/index.js'
-import { resolveSpecPath } from '../spec/index.js'
+import { logger, readJson, readText, REGISTRY_PATH } from '../utils/index.js'
+import { resolveSpecPath, getSpecContent } from '../spec/index.js'
 import { 
   detectTechStack, 
   smartMatchTemplate, 
@@ -190,7 +190,23 @@ export function generateCodeContext(text, projectPath = null, apiTypesPath = nul
 `,
       
       message: '⚠️ 以上规则必须 100% 执行，生成代码后必须输出自检报告'
-    }
+    },
+    
+    // 🚨 完整规则内容（自动读取）
+    specContent: (() => {
+      const specResult = getSpecContent(null, projectPath, null)
+      if (specResult.success) {
+        return {
+          loaded: true,
+          path: specResult.specPath,
+          content: specResult.content
+        }
+      }
+      return {
+        loaded: false,
+        error: '未找到规则文件，请确保 rules/ai-fe-code-std.md 存在'
+      }
+    })()
   }
   
   logger.info('generateCodeContext', '代码上下文生成完成', {

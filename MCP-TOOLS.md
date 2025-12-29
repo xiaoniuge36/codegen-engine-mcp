@@ -1,17 +1,48 @@
 # 🛠️ AI CodeGen Engine - MCP 工具文档
 
-> **v2.0.0** - 模块化重构版本
+> **v2.1.0** - 优化版本（新增一键生成、统计功能、无脑调用）
+
+---
+
+## ⭐ 无脑调用指南（AI 必读）
+
+**用户不需要了解具体工具，AI 自动选择正确的工具。**
+
+### 触发关键词
+
+当用户输入包含以下关键词时，**直接调用 `quick_generate`**：
+
+| 类型 | 关键词示例 |
+|------|-----------|
+| 代码生成 | "生成代码"、"写代码"、"帮我写" |
+| 页面创建 | "做一个页面"、"创建页面"、"列表页"、"详情页" |
+| 组件开发 | "创建组件"、"做个组件"、"弹窗"、"表单" |
+
+### 标准调用流程
+
+```
+用户需求 → quick_generate → 生成代码 → check_code_compliance
+```
+
+### 调用示例
+
+```json
+// Step 1: 调用 quick_generate
+{ "text": "做一个员工列表页，支持搜索和分页", "projectPath": "D:/project/src/App.tsx" }
+
+// Step 2: 根据返回的模板和示例生成代码（hooks 优先）
+
+// Step 3: 调用 check_code_compliance
+{ "generatedFiles": ["src/pages/Employee/hooks.ts", "src/pages/Employee/index.tsx"], "projectPath": "D:/project" }
+```
+
+---
 
 ## 📋 概述
 
-AI 代码生成引擎提供 **15 个** MCP 工具，支持智能模板匹配、组件库知识注入、示例代码自动附加，将代码可用度从 70% 提升至 **80%**。
+AI 代码生成引擎提供 **18 个** MCP 工具，支持智能模板匹配、组件库知识注入、示例代码自动附加。
 
-> 💡 **规则文件已内置**：`rules/ai-fe-code-std.md` 已集成在 MCP 中，用户无需手动添加规则文件。
-> 
-> **推荐工作流**：
-> 1. 调用 `generate_code_context` 获取规则和上下文
-> 2. 按照返回的 `ruleEnforcement` 执行代码生成
-> 3. 调用 `check_code_compliance` 检查代码是否符合规范
+> 💡 **规则文件已内置**：`rules/ai-fe-code-std.md` 已集成，无需手动添加。
 
 ## 🚀 快速启动
 
@@ -34,29 +65,68 @@ npm run dev
 💚 健康检查:   http://127.0.0.1:7331/health
 📖 服务信息:   http://127.0.0.1:7331/
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ 可用工具: 18 个
+
+⭐ 核心工具（必须了解）:
+  - quick_generate          【默认入口】一键快速生成
+  - generate_code_context   一键生成完整代码上下文
+  - check_code_compliance   【生成后调用】检查代码规范
+
+📦 模板工具:
+  - smart_match_template    智能匹配模板
+  - list_templates          列出所有模板
+  - get_template            获取模板详情
+  - get_code_examples       获取示例代码
+
+🔍 项目分析工具:
+  - detect_tech_stack       检测项目技术栈
+  - analyze_project         分析项目结构和代码风格
+  - check_global_types      检查全局类型声明
+  - find_similar_components 查找相似组件
+
+📚 知识库工具:
+  - get_spec_content        获取规范文档内容
+  - get_component_knowledge 获取组件库知识
+  - parse_api_types         解析接口类型文件
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
 ## 🔧 可用工具列表
 
+### ⭐ 推荐调用顺序
+
+```bash
+1. quick_generate 或 generate_code_context（获取所有上下文）
+   ↓
+2. 根据返回的模板和示例代码生成业务代码
+   ↓
+3. check_code_compliance（检查生成的代码）
+```
+
+### 工具列表
+
 | 工具名称 | 功能描述 | 核心参数 |
-|---------|---------|---------|
+|---------|---------|----------|
+| `quick_generate` | ⭐⭐⭐【最推荐】一键快速生成，自动执行所有准备步骤 🆕 | `text`, `projectPath` |
 | `list_templates` | 列出所有可用模板 | 无 |
 | `get_template` | 获取指定模板详情 | `id` |
 | `match_template` | 智能匹配最合适的模板 | `text`, `topK` |
-| `smart_match_template` | 智能匹配（含技术栈+兜底）🆕 | `text`, `techStack`, `topK` |
+| `smart_match_template` | 智能匹配（含技术栈+兜底） | `text`, `projectPath`, `topK` |
 | `build_prompt` | 构建增强版提示词 | `text`, `templateId` |
 | `get_component_knowledge` | 获取组件库知识图谱 | `scope`, `projectId` |
 | `get_code_examples` | 获取模板示例代码 | `templateId` |
 | `search_spec` | 搜索规范文档 | `query`, `maxResults`, `specPath`, `projectPath` |
-| `get_spec_content` | 获取规范文档内容 🆕 | `specPath`, `projectPath`, `section` |
-| `detect_tech_stack` | 检测项目技术栈 🆕 | `projectPath` |
-| `find_similar_components` | 查找项目中相似组件 🆕 | `projectPath`, `keywords` |
-| `check_global_types` | 检查项目全局类型声明 🆕 | `projectPath` |
-| `parse_api_types` | 解析接口类型文件 🆕 | `filePath` |
-| `generate_code_context` | ⭐⭐⭐【必须优先调用】一键生成完整代码上下文 🆕 | `text`, `projectPath`, `apiTypesPath` |
-| `check_code_compliance` | ⭐【生成后必须调用】检查代码规范符合性 🆕 | `generatedFiles`, `projectPath` |
+| `get_spec_content` | 获取规范文档内容 | `specPath`, `projectPath`, `section` |
+| `detect_tech_stack` | 检测项目技术栈 | `projectPath` |
+| `find_similar_components` | 查找项目中相似组件 | `searchText`, `projectPath` |
+| `check_global_types` | 检查项目全局类型声明 | `projectPath` |
+| `parse_api_types` | 解析接口类型文件 | `filePath` |
+| `generate_code_context` | ⭐⭐⭐一键生成完整代码上下文 | `text`, `projectPath`, `apiTypesPath` |
+| `check_code_compliance` | ⭐【生成后必须调用】检查代码规范符合性 | `generatedFiles`, `projectPath` |
+| `get_stats` | 获取工具使用统计 | 无 |
+| `analyze_project` | ⭐ 分析项目结构和代码风格配置 🆕 | `projectPath`, `moduleName` |
 
 ---
 
@@ -664,6 +734,72 @@ npm run dev
 
 ---
 
+### 16. `get_stats`
+
+获取工具使用统计信息。
+
+**参数**：无
+
+**返回示例**：
+```json
+{
+  "created": "2025-12-29 11:05:29",
+  "lastUpdated": "2025-12-29 14:30:00",
+  "totalToolCalls": 35,
+  "toolRanking": [["detect_tech_stack", 7], ["smart_match_template", 7]],
+  "templateRanking": [],
+  "techStackDistribution": []
+}
+```
+
+---
+
+### 17. `analyze_project` 🆕⭐
+
+分析项目结构和代码风格配置，提供智能目录推荐。
+
+**参数**：
+| 参数 | 类型 | 必填 | 说明 |
+|-----|------|-----|------|
+| `projectPath` | string | ✅ | 项目中任意文件的路径 |
+| `moduleName` | string | ❌ | 要创建的模块名称（用于生成推荐路径） |
+
+**调用示例**：
+```json
+{ "projectPath": "D:/project/src/App.tsx", "moduleName": "employee-whitelist" }
+```
+
+**返回内容**：
+```json
+{
+  "projectContext": {
+    "rootDir": "D:/project",
+    "directories": ["pages", "components", "hooks"],
+    "routerType": "umi",
+    "stateManagement": "redux"
+  },
+  "codeStyle": {
+    "prettier": { "found": true },
+    "eslint": { "found": true },
+    "typescript": { "found": true, "strict": true }
+  },
+  "fileSuggestions": {
+    "pageDir": "src/pages/employee-whitelist",
+    "hooksFile": "src/pages/employee-whitelist/hooks/useTableData.ts",
+    "indexFile": "src/pages/employee-whitelist/index.tsx"
+  }
+}
+```
+
+**功能**：
+- ✅ 分析项目目录结构（pages/views/components/hooks等）
+- ✅ 检测路由类型（umi/vue-router/react-router）
+- ✅ 检测状态管理（redux/mobx/pinia/vuex）
+- ✅ 检测代码风格配置（Prettier/ESLint/TypeScript）
+- ✅ 智能推荐文件路径（符合规则兜底逻辑）
+
+---
+
 ## 🚀 典型使用流程
 
 ### 场景1：标准列表页开发
@@ -678,7 +814,7 @@ AI 自动调用流程：
    - 自动附加列表页示例代码（hooks + 组件）
 3. AI 根据增强上下文生成代码
 
-代码可用度：80% ✨
+效果：代码可用度显著提升 ✨
 ```
 
 ### 场景2：明确指定模板
@@ -691,7 +827,7 @@ AI 处理流程：
 2. 跳过匹配，直接使用指定模板
 3. 自动附加详情页示例代码
 
-代码可用度：80% ✨
+效果：代码可用度显著提升 ✨
 ```
 
 ---
@@ -895,9 +1031,9 @@ npm run dev
 
 | 方案 | 代码可用度 | 使用成本 | 维护成本 |
 |------|-----------|---------|---------|
-| 纯提示词 | 40% | 高 | 低 |
-| 提示词 + Rule | 70% | 中 | 中 |
-| **MCP + 示例代码** | **80%** ✨ | **低** | **中** |
+| 纯提示词 | 低 | 高 | 低 |
+| 提示词 + Rule | 中 | 中 | 中 |
+| **MCP + 示例代码** | **高** ✨ | **低** | **中** |
 
 ---
 

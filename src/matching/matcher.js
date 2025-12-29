@@ -2,23 +2,69 @@ import { logger, normalizeText } from '../utils/index.js'
 import { findSimilarComponents } from './tech-stack.js'
 
 /**
- * 模板评分
+ * 场景权重配置
+ */
+const SCENE_WEIGHTS = {
+  // 导入场景
+  import: {
+    keywords: ['excel', 'xlsx', 'xls', '导入', '导入数据', '批量导入', '上传excel', '模板下载', '导入历史'],
+    weight: 5
+  },
+  // 详情场景
+  detail: {
+    keywords: ['详情', '详情页', '单据详情', '审批', '流程', '节点', '时间轴', '附件预览'],
+    weight: 4
+  },
+  // 列表场景
+  list: {
+    keywords: ['列表', '列表页', '表格', '查询', '搜索', 'crud', '增删改查'],
+    weight: 3
+  },
+  // 表单场景
+  form: {
+    keywords: ['表单', '新增', '编辑', '提交', '保存'],
+    weight: 3
+  },
+  // 弹窗场景
+  modal: {
+    keywords: ['弹窗', '弹框', '对话框', 'modal', '抽屉', 'drawer'],
+    weight: 2
+  },
+  // 上传场景
+  upload: {
+    keywords: ['上传', '文件上传', '图片上传', '附件', 'upload'],
+    weight: 4
+  }
+}
+
+/**
+ * 模板评分（增强版）
  */
 export function scoreTemplate(text, tpl) {
   const keywords = Array.isArray(tpl.keywords) ? tpl.keywords : []
   const antiKeywords = Array.isArray(tpl.antiKeywords) ? tpl.antiKeywords : []
+  const scenes = Array.isArray(tpl.scenes) ? tpl.scenes : []
 
   let score = 0
   const hits = []
   const antiHits = []
+  const sceneBoosts = []
 
+  // 基础关键词匹配
   for (const k of keywords) {
     const kk = String(k).toLowerCase()
     if (kk && text.includes(kk)) {
-      score += 2
+      // 精确匹配加分更高
+      if (text.includes(kk + '页') || text.includes(kk + '组件')) {
+        score += 3
+      } else {
+        score += 2
+      }
       hits.push(k)
     }
   }
+  
+  // 反向关键词扣分
   for (const k of antiKeywords) {
     const kk = String(k).toLowerCase()
     if (kk && text.includes(kk)) {
@@ -27,15 +73,35 @@ export function scoreTemplate(text, tpl) {
     }
   }
 
-  // Heuristic boosts
-  if (tpl.scenes && tpl.scenes.includes('import')) {
-    if (text.includes('excel') || text.includes('xlsx') || text.includes('导入') || text.includes('上传')) score += 3
-  }
-  if (tpl.scenes && tpl.scenes.includes('detail')) {
-    if (text.includes('详情') || text.includes('单据') || text.includes('审批') || text.includes('流程')) score += 3
+  // 场景权重加分（增强版）
+  for (const scene of scenes) {
+    const config = SCENE_WEIGHTS[scene]
+    if (config) {
+      const matchedKeywords = config.keywords.filter(kw => text.includes(kw.toLowerCase()))
+      if (matchedKeywords.length > 0) {
+        const boost = config.weight * matchedKeywords.length
+        score += boost
+        sceneBoosts.push(`${scene}: +${boost} (匹配: ${matchedKeywords.join(', ')})`)
+      }
+    }
   }
 
-  return { score, hits, antiHits }
+  // 特殊场景组合加分
+  if (scenes.includes('import') && (text.includes('excel') || text.includes('导入'))) {
+    if (!text.includes('详情') && !text.includes('单据')) {
+      score += 5
+      sceneBoosts.push('导入场景组合: +5')
+    }
+  }
+  
+  if (scenes.includes('detail') && (text.includes('详情') || text.includes('单据'))) {
+    if (!text.includes('导入') && !text.includes('excel')) {
+      score += 5
+      sceneBoosts.push('详情场景组合: +5')
+    }
+  }
+
+  return { score, hits, antiHits, sceneBoosts }
 }
 
 /**

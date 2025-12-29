@@ -10,27 +10,54 @@ import { logger, normalizeText, walkDirectory, ENGINE_ROOT, REPO_ROOT } from '..
 export function detectTechStack(projectPath = null) {
   logger.info('detectTechStack', '开始检测项目技术栈', { projectPath })
   
-  // 尝试多个可能的项目路径
-  const possiblePaths = [
-    projectPath,
-    process.cwd(),
-    path.join(REPO_ROOT, '..'),
-    REPO_ROOT,
-  ].filter(Boolean)
-  
   let pkgPath = null
   let pkgContent = null
   
-  for (const basePath of possiblePaths) {
-    const testPath = path.join(basePath, 'package.json')
-    if (fs.existsSync(testPath)) {
-      try {
-        pkgContent = JSON.parse(fs.readFileSync(testPath, 'utf8'))
-        pkgPath = testPath
-        break
-      } catch (e) {
-        continue
+  // 辅助函数：向上查找 package.json，排除引擎自身
+  const findPackageJsonUpward = (startPath) => {
+    if (!startPath) return null
+    
+    // 如果是文件路径，先取目录
+    let currentPath = path.resolve(startPath)
+    if (fs.existsSync(currentPath) && fs.statSync(currentPath).isFile()) {
+      currentPath = path.dirname(currentPath)
+    }
+    
+    const root = path.parse(currentPath).root
+    
+    while (currentPath && currentPath !== root) {
+      const testPath = path.join(currentPath, 'package.json')
+      if (fs.existsSync(testPath)) {
+        try {
+          const content = JSON.parse(fs.readFileSync(testPath, 'utf8'))
+          // 排除引擎自身的 package.json
+          if (content.name !== 'ai-codegen-engine') {
+            return { path: testPath, content }
+          }
+        } catch (e) {
+          // 解析失败，继续向上查找
+        }
       }
+      currentPath = path.dirname(currentPath)
+    }
+    return null
+  }
+  
+  // 1. 优先使用用户传入的路径（支持文件或目录）
+  if (projectPath) {
+    const result = findPackageJsonUpward(projectPath)
+    if (result) {
+      pkgPath = result.path
+      pkgContent = result.content
+    }
+  }
+  
+  // 2. 如果未找到，从 cwd 向上查找（但排除引擎目录）
+  if (!pkgContent && process.cwd()) {
+    const result = findPackageJsonUpward(process.cwd())
+    if (result) {
+      pkgPath = result.path
+      pkgContent = result.content
     }
   }
   
