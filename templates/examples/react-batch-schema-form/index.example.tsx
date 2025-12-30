@@ -1,28 +1,27 @@
-import React, { useEffect, useMemo } from 'react';
-import {
-  ModalForm,
-  ProFormText,
-  ProFormSelect,
-  ProFormDatePicker,
-  ProFormDigit,
-  ProForm,
-  ProFormDependency,
-} from '@ant-design/pro-components';
+import type { ProFormColumnsType } from '@ant-design/pro-components';
+import { BetaSchemaForm } from '@ant-design/pro-components';
 import { message, Alert, Space, Tag } from 'antd';
+import React, { useEffect, useMemo } from 'react';
 import { batchUpdateItems, getFieldSchema } from '@/services/api';
 
 /**
- * 字段配置项类型
+ * 状态枚举配置示例
  */
-interface FieldSchema {
+const statusValueEnum = {
+  draft: { text: '草稿', status: 'Default' },
+  pending: { text: '待审核', status: 'Processing' },
+  approved: { text: '已通过', status: 'Success' },
+  rejected: { text: '已拒绝', status: 'Error', disabled: true },
+};
+
+/**
+ * 表单数据类型
+ */
+type DataItem = {
   name: string;
-  label: string;
-  type: 'text' | 'select' | 'date' | 'number';
-  required?: boolean;
-  options?: { label: string; value: string | number }[];
-  placeholder?: string;
-  rules?: any[];
-}
+  status: string;
+  [key: string]: any;
+};
 
 interface BatchSchemaFormProps {
   visible: boolean;
@@ -38,9 +37,9 @@ interface BatchSchemaFormProps {
 
 /**
  * 批量 Schema 表单组件
- * - 根据 bizType 动态获取字段配置
- * - 支持批量更新多条记录
- * - 表单字段由 schema 驱动
+ * - 使用 BetaSchemaForm 实现 schema 驱动的表单
+ * - 支持多种 valueType：text, select, date, dateTime, digit, money, textarea 等
+ * - 支持字段联动（dependency）、分组（group）、表单列表（formList）等高级功能
  */
 const BatchSchemaForm: React.FC<BatchSchemaFormProps> = ({
   visible,
@@ -50,28 +49,46 @@ const BatchSchemaForm: React.FC<BatchSchemaFormProps> = ({
   onCancel,
   onSuccess,
 }) => {
-  const [form] = ProForm.useForm();
-  const [fieldSchema, setFieldSchema] = React.useState<FieldSchema[]>([]);
+  const [columns, setColumns] = React.useState<ProFormColumnsType<DataItem>[]>([]);
   const [loading, setLoading] = React.useState(false);
 
-  // 获取字段配置
+  // 获取字段配置并转换为 columns
   useEffect(() => {
     if (visible && bizType) {
       setLoading(true);
       getFieldSchema(bizType)
         .then((res) => {
-          setFieldSchema(res.data || []);
+          // 将后端 schema 转换为 BetaSchemaForm 的 columns 格式
+          const schemaColumns: ProFormColumnsType<DataItem>[] = (res.data || []).map(
+            (field: any) => ({
+              title: field.label,
+              dataIndex: field.name,
+              valueType: field.type || 'text',
+              valueEnum: field.options
+                ? field.options.reduce(
+                    (acc: any, opt: any) => ({
+                      ...acc,
+                      [opt.value]: { text: opt.label },
+                    }),
+                    {},
+                  )
+                : undefined,
+              formItemProps: {
+                rules: field.required
+                  ? [{ required: true, message: `请输入${field.label}` }]
+                  : field.rules,
+              },
+              fieldProps: {
+                placeholder: field.placeholder || `请输入${field.label}`,
+              },
+              width: 'md',
+            }),
+          );
+          setColumns(schemaColumns);
         })
         .finally(() => setLoading(false));
     }
   }, [visible, bizType]);
-
-  // 重置表单
-  useEffect(() => {
-    if (visible) {
-      form.resetFields();
-    }
-  }, [visible, form]);
 
   // 提交处理
   const handleSubmit = async (values: Record<string, any>) => {
@@ -95,62 +112,92 @@ const BatchSchemaForm: React.FC<BatchSchemaFormProps> = ({
     }
   };
 
-  // 根据 schema 渲染表单项
-  const renderFormField = (field: FieldSchema) => {
-    const commonProps = {
-      name: field.name,
-      label: field.label,
-      placeholder: field.placeholder || `请输入${field.label}`,
-      rules: field.required ? [{ required: true, message: `请输入${field.label}` }] : field.rules,
-    };
+  // 示例：带分组和字段联动的 columns 配置
+  const exampleColumns: ProFormColumnsType<DataItem>[] = useMemo(
+    () => [
+      {
+        title: '基础信息',
+        valueType: 'group',
+        columns: [
+          {
+            title: '名称',
+            dataIndex: 'name',
+            valueType: 'text',
+            formItemProps: {
+              rules: [{ required: true, message: '请输入名称' }],
+            },
+            width: 'md',
+          },
+          {
+            title: '状态',
+            dataIndex: 'status',
+            valueType: 'select',
+            valueEnum: statusValueEnum,
+            width: 'sm',
+          },
+        ],
+      },
+      {
+        valueType: 'dependency',
+        name: ['status'],
+        columns: ({ status }) => {
+          if (status === 'rejected') {
+            return [
+              {
+                title: '拒绝原因',
+                dataIndex: 'rejectReason',
+                valueType: 'textarea',
+                formItemProps: {
+                  rules: [{ required: true, message: '请输入拒绝原因' }],
+                },
+                width: 'xl',
+              },
+            ];
+          }
+          return [];
+        },
+      },
+      {
+        title: '扩展信息',
+        valueType: 'group',
+        columns: [
+          {
+            title: '金额',
+            dataIndex: 'amount',
+            valueType: 'money',
+            width: 'sm',
+          },
+          {
+            title: '生效日期',
+            dataIndex: 'effectiveDate',
+            valueType: 'date',
+            width: 'sm',
+          },
+          {
+            title: '数量',
+            dataIndex: 'quantity',
+            valueType: 'digit',
+            fieldProps: {
+              min: 0,
+              precision: 0,
+            },
+            width: 'sm',
+          },
+        ],
+      },
+    ],
+    [],
+  );
 
-    switch (field.type) {
-      case 'select':
-        return (
-          <ProFormSelect
-            key={field.name}
-            {...commonProps}
-            options={field.options}
-            placeholder={field.placeholder || `请选择${field.label}`}
-          />
-        );
-      case 'date':
-        return (
-          <ProFormDatePicker
-            key={field.name}
-            {...commonProps}
-            placeholder={field.placeholder || `请选择${field.label}`}
-          />
-        );
-      case 'number':
-        return (
-          <ProFormDigit
-            key={field.name}
-            {...commonProps}
-            min={0}
-          />
-        );
-      default:
-        return <ProFormText key={field.name} {...commonProps} />;
-    }
-  };
+  // 实际使用时根据 columns 是否为空决定使用动态配置还是示例配置
+  const formColumns = columns.length > 0 ? columns : exampleColumns;
+
+  if (!visible) {
+    return null;
+  }
 
   return (
-    <ModalForm
-      title={`批量编辑（已选 ${selectedIds.length} 条）`}
-      open={visible}
-      form={form}
-      loading={loading}
-      modalProps={{
-        onCancel,
-        destroyOnClose: true,
-        maskClosable: false,
-      }}
-      layout="horizontal"
-      labelCol={{ span: 6 }}
-      wrapperCol={{ span: 16 }}
-      onFinish={handleSubmit}
-    >
+    <>
       <Alert
         message={`将对选中的 ${selectedIds.length} 条记录进行批量更新，仅填写需要修改的字段`}
         type="info"
@@ -170,8 +217,23 @@ const BatchSchemaForm: React.FC<BatchSchemaFormProps> = ({
         </div>
       )}
 
-      {fieldSchema.map(renderFormField)}
-    </ModalForm>
+      <BetaSchemaForm<DataItem>
+        layoutType="ModalForm"
+        title={`批量编辑（已选 ${selectedIds.length} 条）`}
+        open={visible}
+        loading={loading}
+        modalProps={{
+          onCancel,
+          destroyOnClose: true,
+          maskClosable: false,
+        }}
+        layout="horizontal"
+        labelCol={{ span: 6 }}
+        wrapperCol={{ span: 16 }}
+        onFinish={handleSubmit}
+        columns={formColumns}
+      />
+    </>
   );
 };
 

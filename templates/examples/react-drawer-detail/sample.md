@@ -44,6 +44,8 @@ src/pages/[业务模块]/[文件夹名称]/
 
 3. **数据展示**
    - 使用 Descriptions 组件
+   - 默认 `column={2}` 一行展示两条数据
+   - 支持通过 `span` 属性配置单个字段占用列数
    - 字段为空时显示 `-`
    - 状态/类型字段使用 Tag 组件
 
@@ -69,6 +71,7 @@ src/pages/[业务模块]/[文件夹名称]/
 组件需求：
 - Drawer：open/close；width: 600
 - 数据展示：Descriptions 组件；空值显示 `-`
+- 布局配置：column=2（默认一行两列）；span 控制单个字段占用列数
 - 编辑按钮：点击切换到编辑状态（可选）
 - 加载状态：Spin 组件
 
@@ -104,6 +107,7 @@ const handleEdit = (id: string) => {
   id={detailId}
   onClose={() => setDetailVisible(false)}
   onEdit={handleEdit}  // 可选
+  column={2}           // 可选，默认2，一行展示几条数据
 />
 
 <EditDrawerForm

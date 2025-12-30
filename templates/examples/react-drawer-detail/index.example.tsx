@@ -1,5 +1,5 @@
 import React from 'react';
-import { Drawer, Descriptions, Spin, Space, Button, Tag } from 'antd';
+import { Drawer, Descriptions, Spin, Space, Button, Tag, Row, Col } from 'antd';
 import { useDetailData } from './hooks/useDetailData';
 import './index.less';
 
@@ -8,9 +8,10 @@ interface DetailDrawerProps {
   id?: string;
   onClose: () => void;
   onEdit?: (id: string) => void;
+  column?: number;
 }
 
-const DetailDrawer: React.FC<DetailDrawerProps> = ({ visible, id, onClose, onEdit }) => {
+const DetailDrawer: React.FC<DetailDrawerProps> = ({ visible, id, onClose, onEdit, column = 2 }) => {
   const { data, loading } = useDetailData(id, visible);
 
   const handleEdit = () => {
@@ -36,7 +37,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({ visible, id, onClose, onEdi
       }
     >
       <Spin spinning={loading}>
-        <Descriptions column={1} bordered>
+        <Descriptions column={column} bordered>
           <Descriptions.Item label="名称">{data?.name || '-'}</Descriptions.Item>
           
           <Descriptions.Item label="类型">
@@ -57,7 +58,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({ visible, id, onClose, onEdi
             ) : '-'}
           </Descriptions.Item>
           
-          <Descriptions.Item label="描述">{data?.description || '-'}</Descriptions.Item>
+          <Descriptions.Item label="描述" span={column}>{data?.description || '-'}</Descriptions.Item>
           
           <Descriptions.Item label="创建时间">{data?.createTime || '-'}</Descriptions.Item>
           
