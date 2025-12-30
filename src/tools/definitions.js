@@ -127,6 +127,18 @@ export const TOOLS_DEFINITION = [
       required: [] 
     } 
   },
+  { 
+    name: 'validate_code', 
+    description: '【⭐ 代码验证工具】整合 TypeScript + ESLint 一键检查。执行 tsc --noEmit 类型检查和 ESLint 规则检查，返回错误列表和修复建议。生成代码后推荐调用此工具验证质量。', 
+    inputSchema: { 
+      type: 'object', 
+      properties: { 
+        projectPath: { type: 'string', description: '项目路径（文件或目录均可）' },
+        files: { type: 'array', items: { type: 'string' }, description: '要检查的文件列表（可选，不传则检查整个项目）' }
+      }, 
+      required: ['projectPath'] 
+    } 
+  },
 ]
 
 /**

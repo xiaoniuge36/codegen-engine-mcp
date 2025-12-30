@@ -136,7 +136,7 @@ app.listen(PORT, () => {
   console.log(`💚 健康检查:   http://127.0.0.1:${PORT}/health`)
   console.log(`📖 服务信息:   http://127.0.0.1:${PORT}/`)
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('\u2728 \u53ef\u7528\u5de5\u5177: 18 \u4e2a')
+  console.log(`✨ 可用工具: ${TOOLS_DEFINITION.length} 个`)
   console.log('')
   console.log('\u2b50 \u6838\u5fc3\u5de5\u5177\uff08\u5fc5\u987b\u4e86\u89e3\uff09:')
   console.log('  - quick_generate          \u3010\u9ed8\u8ba4\u5165\u53e3\u3011\u4e00\u952e\u5feb\u901f\u751f\u6210')

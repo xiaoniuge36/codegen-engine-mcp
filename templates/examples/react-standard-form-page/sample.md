@@ -45,6 +45,14 @@ src/pages/[业务模块]/[文件夹名称]/
    - 表单提交逻辑
    - 加载状态管理
 
+5. **表单布局（重要）**
+   - 使用 `Row` + `Col` 实现多列布局，避免单列竖向排列
+   - 短字段（Input、Select、DatePicker等）使用两列布局：`<Col span={12}>`
+   - 长字段（TextArea、富文本等）单独占一行：`<Col span={24}>`，并调整 labelCol/wrapperCol
+   - 按钮区域居中显示
+   - Row 设置 `gutter={24}` 保持列间距
+   - 两列布局时 Form 的 labelCol 建议 `span: 8`，wrapperCol 建议 `span: 16`
+
 ## 提示词模板
 
 ```

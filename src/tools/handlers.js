@@ -17,6 +17,7 @@ import { checkGlobalTypes, parseApiTypes, checkCodeCompliance } from '../types/i
 import { generateCodeContext } from './context.js'
 import { buildEnhancedPrompt } from './prompts.js'
 import { quickGenerate } from './quick-generate.js'
+import { validateCode } from './validate.js'
 
 /**
  * 处理工具调用
@@ -339,6 +340,22 @@ export async function handleToolCall(name, args) {
       }
     }
     
+    return { 
+      content: [{ 
+        type: 'text', 
+        text: JSON.stringify(result, null, 2) 
+      }] 
+    }
+  }
+
+  // validate_code
+  if (name === 'validate_code') {
+    const input = z.object({
+      projectPath: z.string(),
+      files: z.array(z.string()).optional(),
+    }).parse(args)
+    
+    const result = validateCode(input.projectPath, input.files || [])
     return { 
       content: [{ 
         type: 'text', 

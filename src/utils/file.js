@@ -1,4 +1,5 @@
 import fs from 'fs'
+import path from 'path'
 import { logger } from './logger.js'
 
 /**
@@ -76,4 +77,57 @@ export function walkDirectory(dir, extensions, maxDepth, currentDepth = 0) {
   }
   
   return results
+}
+
+/**
+ * 向上查找 package.json 文件
+ * @param {string} startPath - 起始路径（文件或目录）
+ * @returns {object|null} - 返回 { dir, packageJson } 或 null
+ */
+export function findPackageJsonUpward(startPath) {
+  if (!startPath) return null
+  
+  try {
+    // 如果是文件路径，获取目录
+    let currentDir = startPath
+    if (fs.existsSync(startPath)) {
+      const stat = fs.statSync(startPath)
+      if (stat.isFile()) {
+        currentDir = path.dirname(startPath)
+      }
+    } else {
+      currentDir = path.dirname(startPath)
+    }
+    
+    // 向上查找 package.json
+    const maxDepth = 10
+    let depth = 0
+    
+    while (currentDir && depth < maxDepth) {
+      const packagePath = path.join(currentDir, 'package.json')
+      
+      if (fs.existsSync(packagePath)) {
+        try {
+          const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+          return {
+            dir: currentDir,
+            path: packagePath,
+            packageJson
+          }
+        } catch (e) {
+          // package.json 解析失败，继续向上查找
+        }
+      }
+      
+      const parentDir = path.dirname(currentDir)
+      if (parentDir === currentDir) break // 到达根目录
+      currentDir = parentDir
+      depth++
+    }
+    
+    return null
+  } catch (e) {
+    logger.error('findPackageJsonUpward', `查找失败: ${e.message}`)
+    return null
+  }
 }

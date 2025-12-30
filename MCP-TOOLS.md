@@ -40,7 +40,7 @@
 
 ## 📋 概述
 
-AI 代码生成引擎提供 **18 个** MCP 工具，支持智能模板匹配、组件库知识注入、示例代码自动附加。
+AI 代码生成引擎提供 **19 个** MCP 工具，支持智能模板匹配、组件库知识注入、示例代码自动附加。
 
 > 💡 **规则文件已内置**：`rules/ai-fe-code-std.md` 已集成，无需手动添加。
 
@@ -127,6 +127,7 @@ npm run dev
 | `check_code_compliance` | ⭐【生成后必须调用】检查代码规范符合性 | `generatedFiles`, `projectPath` |
 | `get_stats` | 获取工具使用统计 | 无 |
 | `analyze_project` | ⭐ 分析项目结构和代码风格配置 🆕 | `projectPath`, `moduleName` |
+| `validate_code` | ⭐⭐【代码验证】整合 TSC + ESLint 一键检查 🆕 | `projectPath`, `files` |
 
 ---
 
@@ -800,6 +801,75 @@ npm run dev
 
 ---
 
+### 18. `validate_code` 🆕⭐⭐
+
+**【代码验证工具】** 整合 TypeScript + ESLint 一键检查，实现规则中定义的"代码自检"流程自动化。
+
+**参数**：
+| 参数 | 类型 | 必填 | 说明 |
+|-----|------|-----|------|
+| `projectPath` | string | ✅ | 项目路径（文件或目录均可） |
+| `files` | array | ❌ | 要检查的文件列表（不传则检查整个项目） |
+
+**调用示例**：
+```json
+{ "projectPath": "D:/project/src/pages/employee/index.tsx" }
+```
+
+**返回内容**：
+```json
+{
+  "success": false,
+  "projectRoot": "D:/project",
+  "summary": {
+    "totalErrors": 3,
+    "totalWarnings": 5,
+    "fixableCount": 4,
+    "tsSkipped": false,
+    "eslintSkipped": false
+  },
+  "typescript": {
+    "success": false,
+    "errorCount": 2,
+    "errors": [
+      { "file": "src/pages/employee/index.tsx", "line": 15, "code": "TS2304", "message": "找不到名称 'UserInfo'" }
+    ]
+  },
+  "eslint": {
+    "success": false,
+    "errorCount": 1,
+    "warningCount": 5,
+    "fixableCount": 4,
+    "errors": [
+      { "file": "src/pages/employee/hooks.ts", "line": 8, "ruleId": "no-unused-vars", "message": "'data' is defined but never used" }
+    ]
+  },
+  "suggestions": [
+    { "type": "typescript", "code": "TS2304", "count": 1, "suggestion": "找不到名称：检查类型是否需要导入或是否为全局类型" },
+    { "type": "eslint", "rule": "no-unused-vars", "count": 2, "suggestion": "删除未使用的变量或导入" }
+  ],
+  "commands": {
+    "tsFix": "npx tsc --noEmit",
+    "eslintFix": "npx eslint src --fix"
+  },
+  "report": "❌ 发现 3 个错误，5 个警告\n\n📋 修复建议：\n- 找不到名称：检查类型是否需要导入或是否为全局类型 (1处)\n- 删除未使用的变量或导入 (2处)"
+}
+```
+
+**功能**：
+- ✅ 执行 `tsc --noEmit` TypeScript 类型检查
+- ✅ 执行 ESLint 规则检查
+- ✅ 返回错误列表（按文件、行号定位）
+- ✅ 自动生成修复建议
+- ✅ 提供修复命令
+
+**使用场景**：
+- 生成代码后验证质量
+- 规则第5步"代码自检"自动化
+- 快速定位类型错误和 ESLint 问题
+
+---
+
 ## 🚀 典型使用流程
 
 ### 场景1：标准列表页开发
@@ -836,13 +906,12 @@ AI 处理流程：
 
 ### 🎯 计划中的新工具
 
-| 工具名称 | 功能描述 | 优先级 |
-|---------|---------|-------|
-| `validate_code` | 代码质量验证（TypeScript/ESLint 检查） | P1 |
-| `suggest_refactor` | 代码重构建议 | P1 |
-| `generate_test` | 自动生成单元测试 | P2 |
-| `analyze_dependencies` | 依赖分析和优化建议 | P2 |
-| `convert_template` | 跨框架模板转换（React ↔ Vue） | P3 |
+| 工具名称 | 功能描述 | 优先级 | 状态 |
+|---------|---------|-------|------|
+| `validate_code` | 代码质量验证（TypeScript/ESLint 检查） | P1 | ✅ 已实现 |
+| `suggest_refactor` | 代码重构建议 | P1 | ⏳ 待开发 |
+| `generate_test` | 自动生成单元测试 | P2 | ⏳ 待开发 |
+| `convert_template` | 跨框架模板转换（React ↔ Vue） | P3 | ⏳ 待开发 |
 
 ### 🎯 功能增强计划
 
