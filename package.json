@@ -1,0 +1,42 @@
+{
+  "name": "ai-codegen-engine",
+  "version": "2.1.1",
+  "description": "AI 代码生成引擎 - 智能前端代码生成服务（MCP 协议）",
+  "type": "module",
+  "main": "src/server.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./server": "./src/server.js",
+    "./http": "./src/server-http.js"
+  },
+  "scripts": {
+    "start": "node src/server-http.js",
+    "start:stdio": "node src/server.js",
+    "dev": "node --watch src/server-http.js",
+    "build": "bash scripts/build.sh",
+    "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build.ps1",
+    "build:full": "bash scripts/build-full.sh",
+    "build:full:win": "powershell -ExecutionPolicy Bypass -File scripts/build-full.ps1",
+    "version:patch": "bash scripts/version.sh patch",
+    "version:minor": "bash scripts/version.sh minor",
+    "version:major": "bash scripts/version.sh major",
+    "release": "bash scripts/release.sh patch",
+    "release:patch": "bash scripts/release.sh patch",
+    "release:minor": "bash scripts/release.sh minor",
+    "release:major": "bash scripts/release.sh major"
+  },
+  "keywords": [
+    "ai",
+    "codegen",
+    "mcp",
+    "template",
+    "frontend"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "express": "^4.18.2",
+    "zod": "^3.22.4"
+  }
+}

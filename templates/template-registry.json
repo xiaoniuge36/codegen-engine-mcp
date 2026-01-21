@@ -1,0 +1,211 @@
+{
+  "version": "1.3.0",
+  "templates": [
+    {
+      "id": "react-pc-file-upload",
+      "name": "React PC 文件上传组件（Ant Design Upload + 进度条）",
+      "paths": ["templates/examples/react-pc-file-upload/"],
+      "scenes": ["upload", "pc", "file", "component"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": [
+        "上传",
+        "文件上传",
+        "图片上传",
+        "附件",
+        "antd",
+        "ant-design",
+        "pc",
+        "进度条",
+        "upload",
+        "react",
+        "picture-card"
+      ],
+      "antiKeywords": ["h5", "移动端", "vant", "导入", "excel", "vue", "element"],
+      "promptTemplateKey": "reactPcFileUpload"
+    },
+    {
+      "id": "vue2-h5-file-upload",
+      "name": "Vue2 H5 文件上传组件（Vant Uploader + 水印）",
+      "paths": ["templates/examples/vue2-h5-file-upload/"],
+      "scenes": ["upload", "h5", "mobile", "file"],
+      "componentScope": "common",
+      "techStack": "vue2",
+      "keywords": [
+        "上传",
+        "文件上传",
+        "图片上传",
+        "附件",
+        "vant",
+        "h5",
+        "移动端",
+        "水印",
+        "uploader",
+        "vue2"
+      ],
+      "antiKeywords": ["pc", "element", "导入", "excel"],
+      "promptTemplateKey": "vue2H5FileUpload"
+    },
+    {
+      "id": "vue2-pc-file-upload",
+      "name": "Vue2 PC 文件上传组件（Element Upload + 进度条）",
+      "paths": ["templates/examples/vue2-pc-file-upload/"],
+      "scenes": ["upload", "pc", "file"],
+      "componentScope": "common",
+      "techStack": "vue",
+      "keywords": [
+        "上传",
+        "文件上传",
+        "图片上传",
+        "附件",
+        "element",
+        "pc",
+        "进度条",
+        "upload",
+        "vue2",
+        "vue3"
+      ],
+      "antiKeywords": ["h5", "移动端", "vant", "导入", "excel"],
+      "promptTemplateKey": "vue2PcFileUpload"
+    },
+    {
+      "id": "react-nonstandard-detail",
+      "name": "React 非标独立详情页（Detail Page）",
+      "paths": ["templates/examples/react-nonstandard-detail/"],
+      "scenes": ["detail", "nonstandard"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": [
+        "详情",
+        "详情页",
+        "单据详情",
+        "查看",
+        "审批",
+        "流程",
+        "节点",
+        "时间轴",
+        "出差申请单",
+        "单据号",
+        "附件预览",
+        "卡片布局",
+        "路由参数"
+      ],
+      "antiKeywords": ["导入", "上传", "excel", "xlsx", "模板下载", "导入记录", "列表", "表格", "搜索"],
+      "promptTemplateKey": "reactNonStandardDetail"
+    },
+    {
+      "id": "react-import-list-modal",
+      "name": "React 带列表导入弹窗（Import List Modal / Excel Import）",
+      "paths": ["templates/examples/react-import-list-modal/"],
+      "scenes": ["import", "modal"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": [
+        "导入",
+        "上传",
+        "excel",
+        "xlsx",
+        "xls",
+        "模板下载",
+        "导入历史",
+        "导入记录",
+        "异步导入",
+        "处理结果",
+        "轮询",
+        "下载错误",
+        "下载处理结果"
+      ],
+      "antiKeywords": ["详情", "审批", "流程", "单据详情"],
+      "promptTemplateKey": "reactImportListModal"
+    },
+    {
+      "id": "react-standard-list-crud",
+      "name": "React 标准列表页（ProTable + 搜索 + 新增/编辑弹窗）",
+      "paths": ["templates/examples/react-standard-list-crud/"],
+      "scenes": ["list", "standard", "crud"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": ["列表", "列表页", "表格", "搜索", "查询", "新增", "编辑", "删除", "批量", "ProTable", "CRUD", "增删改查"],
+      "antiKeywords": ["导入", "xlsx", "excel", "详情页", "单据详情"],
+      "promptTemplateKey": "reactStandardListCrud"
+    },
+    {
+      "id": "react-standard-form-page",
+      "name": "React 标准表单页（独立路由新增/编辑）",
+      "paths": ["templates/examples/react-standard-form-page/"],
+      "scenes": ["form", "standard", "page"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": ["表单", "表单页", "新增页面", "编辑页面", "保存", "提交", "校验", "路由参数", "id"],
+      "antiKeywords": ["导入", "excel", "xlsx", "列表", "表格"],
+      "promptTemplateKey": "reactStandardFormPage"
+    },
+    {
+      "id": "react-standard-modal-form",
+      "name": "React 标准弹窗表单（ModalForm）",
+      "paths": ["templates/examples/react-standard-modal-form/"],
+      "scenes": ["modal", "standard", "form"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": ["弹窗", "弹框", "ModalForm", "对话框", "新增", "编辑", "表单", "提交"],
+      "antiKeywords": ["导入", "excel", "xlsx", "详情页", "路由"],
+      "promptTemplateKey": "reactStandardModalForm"
+    },
+    {
+      "id": "vue3-standard-list-crud",
+      "name": "Vue 3 标准列表页（Element Plus + 搜索 + 新增/编辑弹窗）",
+      "paths": ["templates/examples/vue3-standard-list-crud/"],
+      "scenes": ["list", "standard", "crud"],
+      "componentScope": "common",
+      "techStack": "vue3",
+      "keywords": ["列表", "列表页", "表格", "搜索", "查询", "新增", "编辑", "删除", "批量", "el-table", "vue3", "composition"],
+      "antiKeywords": ["导入", "xlsx", "excel", "详情页", "单据详情", "vue2"],
+      "promptTemplateKey": "vue3StandardListCrud"
+    },
+    {
+      "id": "vue2-standard-list-crud",
+      "name": "Vue 2 标准列表页（Element UI + 搜索 + 新增/编辑弹窗）",
+      "paths": ["templates/examples/vue2-standard-list-crud/"],
+      "scenes": ["list", "standard", "crud"],
+      "componentScope": "common",
+      "techStack": "vue2",
+      "keywords": ["列表", "列表页", "表格", "搜索", "查询", "新增", "编辑", "删除", "批量", "getwayTable", "vue2", "options"],
+      "antiKeywords": ["导入", "xlsx", "excel", "详情页", "单据详情", "vue3"],
+      "promptTemplateKey": "vue2StandardListCrud"
+    },
+    {
+      "id": "react-drawer-form",
+      "name": "React 抽屉编辑表单（DrawerForm）",
+      "paths": ["templates/examples/react-drawer-form/"],
+      "scenes": ["drawer", "form", "edit"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": ["抽屉", "抽屉编辑", "DrawerForm", "侧边", "新增", "编辑", "表单", "提交"],
+      "antiKeywords": ["导入", "excel", "xlsx", "详情页", "独立页面", "路由"],
+      "promptTemplateKey": "reactDrawerForm"
+    },
+    {
+      "id": "react-drawer-detail",
+      "name": "React 抽屉详情（Drawer Detail）",
+      "paths": ["templates/examples/react-drawer-detail/"],
+      "scenes": ["drawer", "detail", "view"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": ["抽屉", "抽屉详情", "查看详情", "侧边详情", "Drawer", "详情", "查看"],
+      "antiKeywords": ["导入", "excel", "xlsx", "编辑", "表单", "独立页面", "路由"],
+      "promptTemplateKey": "reactDrawerDetail"
+    },
+    {
+      "id": "react-batch-schema-form",
+      "name": "React 批量 Schema 表单（BatchSchemaForm）",
+      "paths": ["templates/examples/react-batch-schema-form/"],
+      "scenes": ["batch", "schema", "form", "modal"],
+      "componentScope": "common",
+      "techStack": "react",
+      "keywords": ["批量", "批量编辑", "批量更新", "schema", "动态表单", "多选", "批量操作", "批量审批", "批量修改"],
+      "antiKeywords": ["导入", "excel", "xlsx", "详情页", "单条", "单个"],
+      "promptTemplateKey": "reactBatchSchemaForm"
+    }
+  ]
+}
+
