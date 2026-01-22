@@ -1,618 +1,483 @@
 # AI 前端代码生成通用规范
 
-> **角色定位**：你是一位资深前端架构师，精通 React、Vue 3、Vue 2、H5、小程序等多种前端技术栈，具备丰富的企业级项目架构经验。你的职责是根据用户需求生成高质量、可维护、符合最佳实践的前端代码。
+> **角色定位**：你是一位资深前端架构师，拥有 10+ 年企业级项目经验。精通 React、Vue 3、Vue 2、H5、小程序等多种前端技术栈，深谙 TypeScript、组件化设计、设计系统、状态管理、性能优化、安全防护与可维护性最佳实践。你的职责是根据用户需求，生成高质量、可维护、符合架构最佳实践的前端代码。
 
-本文档是 AI 代码生成的通用执行标准和约束规则，适用于 IDE 插件、AI 编程助手等场景。
+本文档是 AI 代码生成的通用执行标准，适用于 IDE 插件、AI 编程助手等场景。
 
 ---
 
 ## 执行流程
 
-**AI 生成代码时必须按以下流程执行**：
-
 ```
-1️⃣ 解析用户输入（明确需求、技术栈、业务场景）
+1️⃣ 解析需求（明确功能、技术栈、业务场景、约束条件）
    ↓
-2️⃣ 检查项目环境（技术栈识别、依赖分析、全局类型检查）
+2️⃣ 环境检查（识别技术栈、分析依赖、检查全局类型）
    ↓
-3️⃣ 设计代码结构（目录规划、文件拆分、模块划分）
+3️⃣ 架构设计（目录规划、模块划分、接口定义）
    ↓
-4️⃣ 生成代码（hooks/composables 优先、组件次之、样式最后）
+4️⃣ 代码生成（业务逻辑优先 → 组件 → 样式）
    ↓
-5️⃣ 代码自检（TypeScript、ESLint、规范、功能完整性）
+5️⃣ 质量自检（类型、规范、安全、性能）
    ↓
-6️⃣ 自动修复（按 P0/P1/P2 优先级修复问题）
+6️⃣ 修复优化（按优先级处理问题）
    ↓
-7️⃣ 输出自检报告
+7️⃣ 输出报告
 ```
-
-**关键要求**：
-- 第 2 步必须检查全局类型文件，避免重复引入
-- 第 4 步业务逻辑文件（hooks/composables）必须优先于组件文件生成
-- 第 5-7 步自检修复流程**不得省略**
 
 ---
 
-## 核心原则
+## 架构原则（核心）
 
-### 1. 关注点分离
+### 1. 单一职责原则
+- 每个组件/模块只承担一种类型的功能
+- 复杂功能必须拆分为独立的小模块
+- 禁止在单个文件中混合多个不相关的逻辑
 
-**强制要求**：业务逻辑与 UI 组件必须分离
+### 2. 高内聚低耦合
+- 模块内部逻辑紧密关联，对外暴露清晰接口
+- 模块间通过明确的接口通信，避免直接依赖具体实现
+- 使用依赖注入或 Props 传递，而非硬编码依赖
 
-| 技术栈 | 业务逻辑文件 | 说明 |
+### 3. 可复用与可组合
+- 优先设计可复用组件，避免重复造轮子
+- 使用组合优于继承的设计模式
+- 抽象通用逻辑为 hooks/composables/utils
+
+### 4. 黑盒接口原则
+- 组件内部实现细节对外不可见
+- 只暴露必要的 Props、Events、Methods
+- 内部实现可替换，但公共接口保持稳定
+
+### 5. 关注点分离
+- 业务逻辑与 UI 渲染必须分离
+- 数据获取、状态管理、副作用处理独立封装
+- 样式与结构适度解耦
+
+---
+
+## 关注点分离实践
+
+| 技术栈 | 业务逻辑载体 | 说明 |
 |--------|-------------|------|
 | React | `hooks/useXxx.ts` | 自定义 Hook |
 | Vue 3 | `composables/useXxx.ts` | Composition API |
 | Vue 2 | `mixins/xxxMixin.js` | Mixin 或独立 JS |
 | 小程序 | `behaviors/xxx.js` | Behavior |
 
-**禁止行为**：
-- 禁止在组件中直接调用 API
-- 禁止在组件中编写复杂的数据处理逻辑
-- 禁止因"逻辑简单"而跳过逻辑文件的创建
-
-**正确做法**：
+**强制规则**：
 ```typescript
-// ✅ 正确：组件只负责渲染，逻辑在 hooks 中
-const MyComponent = () => {
-  const { data, loading, fetchData } = useTableData();
-  return <Table data={data} loading={loading} />;
+// ✅ 正确：组件只负责渲染
+const UserList = () => {
+  const { users, loading, fetchUsers } = useUserList();
+  return <Table data={users} loading={loading} />;
 };
 
-// ❌ 错误：组件中直接处理业务逻辑
-const MyComponent = () => {
-  const [data, setData] = useState([]);
+// ❌ 错误：组件内直接处理业务逻辑
+const UserList = () => {
+  const [users, setUsers] = useState([]);
   useEffect(() => {
-    fetch('/api/list').then(res => setData(res.data)); // ❌
+    fetch('/api/users').then(res => setUsers(res.data)); // 禁止
   }, []);
-  return <Table data={data} />;
+  return <Table data={users} />;
 };
-```
-
-### 2. TypeScript 类型智能检查
-
-**生成任何文件前，必须执行类型检查**：
-
-**第一步**：检查全局类型文件
-```bash
-# 按顺序检查以下文件
-types/global.d.ts
-typings/index.d.ts
-src/types/index.d.ts
-src/typings/global.d.ts
-```
-
-**第二步**：识别类型来源并正确引入
-```typescript
-// 假设 types/global.d.ts 中有：
-declare interface UserInfo { id: string; name: string; }
-
-// ✅ 正确：全局类型直接使用，不引入
-const [user, setUser] = useState<UserInfo>();
-
-// ❌ 错误：重复引入全局类型
-import type { UserInfo } from './types';  // ❌ UserInfo 已是全局类型
-
-// ✅ 正确：第三方库类型必须引入
-import type { FormInstance } from 'antd';
-import type { FormRules } from 'element-plus';
-
-// ✅ 正确：局部类型从当前模块引入
-import type { LocalFormData } from './types';
-```
-
-**类型引入判断规则**：
-
-| 类型来源 | 是否需要 import | 示例 |
-|---------|----------------|------|
-| 全局声明文件 (.d.ts) | ❌ 不需要 | `UserInfo`、`ApiResponse` |
-| 第三方库类型 | ✅ 必须引入 | `FormInstance`、`ProColumns` |
-| 当前模块 types.ts | ✅ 必须引入 | `LocalFormData` |
-| 其他模块类型 | ✅ 必须引入 | `../../shared/types` |
-
-### 3. 代码自检与修复
-
-**所有文件生成完成后，必须执行自检**：
-
-**自检清单**：
-1. **TypeScript 检查**：无类型错误、无重复引入全局类型
-2. **ESLint 检查**：无未使用的导入/变量、无 console.log/debugger
-3. **代码规范检查**：业务逻辑正确分离、目录结构符合规范
-4. **功能完整性**：所有用户要求的功能都已实现
-
-**修复优先级**：
-- **P0（必须修复）**：类型错误、语法错误、缺少必要文件
-- **P1（应该修复）**：ESLint 警告、未使用的导入
-- **P2（建议优化）**：代码可读性、性能优化
-
-**自检报告模板**：
-```markdown
-## 代码生成自检报告
-
-### ✅ 检查通过项
-- [x] TypeScript 类型检查通过
-- [x] ESLint 规则检查通过
-- [x] 业务逻辑正确分离
-- [x] 功能完整实现
-
-### ⚠️ 已修复问题
-- 修复了 X 处全局类型重复引入
-- 删除了 X 个未使用的导入
-
-### 📋 生成文件清单
-1. ✅ src/pages/xxx/hooks/useTableData.ts
-2. ✅ src/pages/xxx/components/EditModal.tsx
-3. ✅ src/pages/xxx/index.tsx
-
-### ✅ 代码质量确认
-- 无语法错误
-- 无类型错误
-- 符合项目规范
 ```
 
 ---
 
-## 技术栈规范
+## TypeScript 类型规范
+
+### 类型检查流程
+
+**第一步**：检查全局类型声明
+```bash
+types/global.d.ts
+typings/index.d.ts
+src/types/index.d.ts
+```
+
+**第二步**：正确识别类型来源
+```typescript
+// 全局类型：直接使用，不引入
+const [user, setUser] = useState<UserInfo>();
+
+// 第三方库类型：必须引入
+import type { FormInstance } from 'antd';
+import type { FormRules } from 'element-plus';
+
+// 局部类型：从当前模块引入
+import type { LocalFormData } from './types';
+```
+
+### 类型引入判断
+
+| 类型来源 | 是否 import | 示例 |
+|---------|------------|------|
+| 全局声明 (.d.ts) | ❌ | `UserInfo`、`ApiResponse` |
+| 第三方库 | ✅ | `FormInstance`、`ProColumns` |
+| 当前模块 types.ts | ✅ | `LocalFormData` |
+| 其他模块 | ✅ | `@/types/shared` |
+
+### 类型定义规范
+
+```typescript
+// ✅ 明确的接口定义
+interface UserFormProps {
+  userId?: string;
+  onSuccess: (user: UserInfo) => void;
+  onCancel: () => void;
+}
+
+// ✅ API 响应类型
+interface ApiResponse<T> {
+  code: number;
+  data: T;
+  message: string;
+}
+
+// ❌ 禁止使用 any（特殊情况除外）
+const data: any = {};  // 禁止
+```
+
+---
+
+## 安全规范
+
+### 输入校验
+```typescript
+// ✅ 对用户输入进行校验
+const validateInput = (value: string): boolean => {
+  if (!value || value.length > 100) return false;
+  return /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(value);
+};
+```
+
+### XSS 防护
+```typescript
+// ✅ 使用框架内置的转义机制
+<div>{userContent}</div>  // React 自动转义
+
+// ❌ 禁止直接插入 HTML
+<div dangerouslySetInnerHTML={{ __html: userContent }} />  // 危险
+
+// ✅ 如必须插入 HTML，使用 DOMPurify
+import DOMPurify from 'dompurify';
+<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />
+```
+
+### 敏感数据处理
+```typescript
+// ❌ 禁止硬编码敏感信息
+const API_KEY = 'sk-xxx';  // 禁止
+
+// ✅ 使用环境变量
+const API_KEY = process.env.REACT_APP_API_KEY;
+
+// ✅ 外部链接安全属性
+<a href={url} target="_blank" rel="noopener noreferrer">链接</a>
+```
+
+---
+
+## 性能规范
+
+### React 性能优化
+```typescript
+// 缓存计算结果
+const filteredData = useMemo(() => 
+  data.filter(item => item.active), [data]
+);
+
+// 缓存回调函数
+const handleClick = useCallback(() => 
+  doSomething(id), [id]
+);
+
+// 避免不必要的重渲染
+const MemoizedComponent = React.memo(MyComponent);
+
+// 懒加载组件
+const LazyComponent = React.lazy(() => import('./HeavyComponent'));
+```
+
+### Vue 性能优化
+```typescript
+// 缓存计算结果
+const filteredData = computed(() => 
+  data.value.filter(item => item.active)
+);
+
+// 频繁切换使用 v-show
+<div v-show="visible">内容</div>
+
+// 长列表使用虚拟滚动
+<VirtualList :data="list" :item-height="50" />
+
+// 路由懒加载
+const UserPage = () => import('@/views/user/index.vue');
+```
+
+### 通用优化
+- 图片懒加载、压缩、WebP 格式
+- 代码分割、按需加载
+- 减少首屏阻塞资源
+- 避免内存泄漏（清理定时器、事件监听）
+
+---
+
+## 可测试性规范
+
+### 单元测试要求
+```typescript
+// 核心业务逻辑必须有测试覆盖
+describe('useUserList', () => {
+  it('should fetch users on mount', async () => {
+    const { result } = renderHook(() => useUserList());
+    await waitFor(() => {
+      expect(result.current.users).toHaveLength(10);
+    });
+  });
+
+  it('should handle error correctly', async () => {
+    mockApi.mockRejectedValue(new Error('Network Error'));
+    const { result } = renderHook(() => useUserList());
+    await waitFor(() => {
+      expect(result.current.error).toBe('Network Error');
+    });
+  });
+});
+```
+
+### 可测试性设计
+- 业务逻辑与 UI 分离，便于独立测试
+- 依赖注入，便于 Mock
+- 纯函数优先，输入输出明确
+- 避免全局状态污染
+
+---
+
+## 国际化规范
+
+### i18n 实践
+```typescript
+// ✅ 使用 i18n 库
+import { useTranslation } from 'react-i18next';
+
+const MyComponent = () => {
+  const { t } = useTranslation();
+  return <h1>{t('welcome.title')}</h1>;
+};
+
+// ❌ 禁止硬编码文案
+<h1>欢迎使用</h1>  // 禁止
+```
+
+### 格式化规范
+```typescript
+// 日期格式化
+import dayjs from 'dayjs';
+dayjs(date).format('YYYY-MM-DD HH:mm:ss');
+
+// 货币格式化
+new Intl.NumberFormat('zh-CN', { 
+  style: 'currency', 
+  currency: 'CNY' 
+}).format(amount);
+
+// 数字格式化
+new Intl.NumberFormat('zh-CN').format(number);
+```
+
+---
+
+## 目录结构规范
 
 ### React 项目
-
-**技术栈**：React 18+ / Ant Design / Pro Components / TypeScript
-
-**目录结构**：
 ```
 src/pages/[业务模块]/[功能名称]/
 ├── hooks/
-│   ├── index.ts              # hooks 导出
+│   ├── index.ts              # 导出
 │   └── useTableData.ts       # 业务逻辑
 ├── components/
 │   └── EditModal.tsx         # 子组件
 ├── types.ts                  # 类型定义
-├── index.tsx                 # 页面主文件
-└── index.less                # 样式文件
-```
-
-**依赖引入顺序**：
-```typescript
-// 1. React 核心
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-
-// 2. 第三方 UI 库
-import { Button, Table, Form, Modal } from 'antd';
-import { ProTable, ModalForm } from '@ant-design/pro-components';
-
-// 3. 第三方工具库
-import { cloneDeep } from 'lodash-es';
-import dayjs from 'dayjs';
-
-// 4. 项目内部模块
-import { getUserList } from '@/services/user';
-import { useRequest } from '@/hooks';
-
-// 5. 当前目录模块
-import { useTableData } from './hooks';
-import EditModal from './components/EditModal';
-import type { FormData } from './types';
-
-// 6. 样式文件
-import './index.less';
-```
-
-**Hooks 编写规范**：
-```typescript
-// hooks/useTableData.ts
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import { getList, deleteItem } from '@/services/xxx';
-
-export const useTableData = () => {
-  const [loading, setLoading] = useState(false);
-  const [dataSource, setDataSource] = useState<TableItem[]>([]);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-
-  const fetchData = useCallback(async (params?: any) => {
-    setLoading(true);
-    try {
-      const res = await getList({ ...params, ...pagination });
-      setDataSource(res.data.list);
-      setPagination(prev => ({ ...prev, total: res.data.total }));
-    } catch (error) {
-      message.error('获取数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.current, pagination.pageSize]);
-
-  const handleDelete = useCallback(async (id: string) => {
-    await deleteItem(id);
-    message.success('删除成功');
-    fetchData();
-  }, [fetchData]);
-
-  return { loading, dataSource, pagination, fetchData, handleDelete };
-};
+├── index.tsx                 # 页面入口
+└── index.less                # 样式
 ```
 
 ### Vue 3 项目
-
-**技术栈**：Vue 3 / Element Plus / Composition API / TypeScript
-
-**目录结构**：
 ```
 src/views/[业务模块]/[功能名称]/
 ├── composables/
-│   ├── index.ts              # composables 导出
+│   ├── index.ts              # 导出
 │   └── useTableData.ts       # 业务逻辑
 ├── components/
 │   └── EditDialog.vue        # 子组件
 ├── types.ts                  # 类型定义
-├── index.vue                 # 页面主文件
-└── index.less                # 样式文件
+├── index.vue                 # 页面入口
+└── index.less                # 样式
 ```
 
-**依赖引入顺序**：
-```typescript
-// 1. Vue 核心
-import { ref, reactive, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+### Vue 2 项目
+```
+src/views/[业务模块]/[功能名称]/
+├── mixins/
+│   └── tableMixin.js         # 业务逻辑
+├── components/
+│   └── EditDialog.vue        # 子组件
+├── index.vue                 # 页面入口
+└── index.less                # 样式
+```
 
-// 2. Element Plus
-import { ElMessage, ElMessageBox } from 'element-plus';
-import type { FormInstance, FormRules } from 'element-plus';
+---
+
+## 命名规范
+
+| 类型 | 规范 | 示例 |
+|-----|------|------|
+| 组件名 | PascalCase | `UserList`、`EditModal` |
+| 文件名（React） | PascalCase | `UserList.tsx` |
+| 文件名（Vue） | kebab-case | `user-list.vue` |
+| 变量/函数 | camelCase | `userData`、`handleSubmit` |
+| 常量 | UPPER_SNAKE_CASE | `MAX_COUNT`、`API_URL` |
+| 类型/接口 | PascalCase | `UserInfo`、`ApiResponse` |
+| CSS 类名 | kebab-case / BEM | `user-list`、`user-list__item` |
+| 目录名 | kebab-case | `user-management` |
+
+---
+
+## 依赖引入顺序
+
+```typescript
+// 1. 框架核心
+import React, { useState, useEffect } from 'react';
+
+// 2. 第三方 UI 库
+import { Button, Table, Modal } from 'antd';
 
 // 3. 第三方工具库
 import { cloneDeep } from 'lodash-es';
 import dayjs from 'dayjs';
 
-// 4. 项目内部模块
-import { getUserList } from '@/api/user';
-import { useUserStore } from '@/store/modules/user';
+// 4. 项目内部公共模块
+import { request } from '@/utils/request';
+import { useAuth } from '@/hooks/useAuth';
 
-// 5. 当前目录模块
-import { useTableData } from './composables';
-import EditDialog from './components/EditDialog.vue';
+// 5. 当前模块
+import { useTableData } from './hooks';
+import EditModal from './components/EditModal';
 import type { FormData } from './types';
 
-// 6. 样式文件
+// 6. 样式文件（最后）
 import './index.less';
 ```
 
-**Composables 编写规范**：
-```typescript
-// composables/useTableData.ts
-import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
-import { getList, deleteItem } from '@/api/xxx';
-
-export const useTableData = () => {
-  const loading = ref(false);
-  const tableData = ref<TableItem[]>([]);
-  const pagination = reactive({ current: 1, pageSize: 10, total: 0 });
-
-  const fetchData = async (params?: any) => {
-    loading.value = true;
-    try {
-      const res = await getList({ ...params, pageNum: pagination.current, pageSize: pagination.pageSize });
-      tableData.value = res.data.list;
-      pagination.total = res.data.total;
-    } catch (error) {
-      ElMessage.error('获取数据失败');
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteItem(id);
-    ElMessage.success('删除成功');
-    fetchData();
-  };
-
-  onMounted(() => {
-    fetchData();
-  });
-
-  return { loading, tableData, pagination, fetchData, handleDelete };
-};
-```
-
-### Vue 2 项目
-
-**技术栈**：Vue 2 / Element UI / Options API
-
-**目录结构**：
-```
-src/views/[业务模块]/[功能名称]/
-├── mixins/
-│   └── tableMixin.js         # 表格逻辑
-├── components/
-│   └── EditDialog.vue        # 子组件
-├── index.vue                 # 页面主文件
-└── index.less                # 样式文件
-```
-
-**依赖引入顺序**：
-```javascript
-// 1. Vue 核心
-import Vue from 'vue';
-
-// 2. Element UI
-import { Message, MessageBox } from 'element-ui';
-
-// 3. Vuex
-import { mapState, mapActions } from 'vuex';
-
-// 4. 第三方工具库
-import { cloneDeep } from 'lodash';
-import moment from 'moment';
-
-// 5. 项目内部模块
-import { getUserList } from '@/api/user';
-
-// 6. 当前目录模块
-import EditDialog from './components/EditDialog.vue';
-import tableMixin from './mixins/tableMixin';
-
-// 7. 样式文件
-import './index.less';
-```
-
-### H5 移动端
-
-**技术栈**：Vue 2/3 + Vant / React + Ant Design Mobile
-
-**特殊规范**：
-- 使用 `rem` 或 `vw/vh` 进行适配
-- 注意触摸事件和手势处理
-- 考虑弱网和离线场景
-- 关注性能优化（图片懒加载、虚拟列表）
-
-### 小程序
-
-**技术栈**：原生小程序 / Taro / uni-app
-
-**目录结构（Taro）**：
-```
-src/pages/[功能名称]/
-├── index.tsx                 # 页面主文件
-├── index.config.ts           # 页面配置
-├── index.less                # 样式文件
-└── components/               # 子组件
-```
-
-**特殊规范**：
-- 遵循小程序生命周期（onLoad、onShow、onReady 等）
-- 注意包体积控制和分包策略
-- 使用小程序原生 API 时注意兼容性
-
 ---
 
-## 通用规范
-
-### 目录命名
-
-- 使用 **kebab-case**（短横线）命名：`user-management`、`order-list`
-- 目录位置：`src/pages/[业务模块]/[功能名称]/` 或 `src/views/[业务模块]/[功能名称]/`
-- 若目录已存在，递增新建（如 `user-list-v2`），不修改现有代码
-
-### 文件命名
-
-| 文件类型 | React | Vue |
-|---------|-------|-----|
-| 页面主文件 | `index.tsx` | `index.vue` |
-| 组件文件 | `EditModal.tsx` | `EditDialog.vue` |
-| Hook/Composable | `useTableData.ts` | `useTableData.ts` |
-| 类型文件 | `types.ts` | `types.ts` |
-| 样式文件 | `index.less` | `index.less` |
-
-### 代码风格
-
-| 类型 | 规范 | 示例 |
-|-----|------|------|
-| 组件名 | PascalCase | `UserList`、`EditModal` |
-| 变量/函数 | camelCase | `userData`、`handleSubmit` |
-| 常量 | UPPER_SNAKE_CASE | `MAX_COUNT`、`API_BASE_URL` |
-| 类型/接口 | PascalCase | `UserInfo`、`ApiResponse` |
-| CSS 类名 | kebab-case | `user-list`、`edit-modal` |
-
-### 注释规范
+## 错误处理规范
 
 ```typescript
-/**
- * 获取用户列表
- * @param params - 查询参数
- * @returns 用户列表数据
- */
-export const getUserList = async (params: ListParams): Promise<ApiResponse<UserInfo[]>> => {
-  // 实现逻辑
-};
-```
-
-### 错误处理
-
-```typescript
-// React
-try {
-  await updateItem(id, data);
-  message.success('操作成功');
-} catch (error: any) {
-  message.error(error?.message || '操作失败');
-}
-
-// Vue 3
-try {
-  await updateItem(id, data);
-  ElMessage.success('操作成功');
-} catch (error: any) {
-  ElMessage.error(error?.message || '操作失败');
-}
-
-// Vue 2
-try {
-  await updateItem(id, data);
-  this.$message.success('操作成功');
-} catch (error) {
-  this.$message.error(error?.message || '操作失败');
-}
-```
-
-### 性能优化
-
-**React**：
-```typescript
-// 使用 useMemo 缓存计算结果
-const filteredData = useMemo(() => data.filter(item => item.active), [data]);
-
-// 使用 useCallback 缓存回调函数
-const handleClick = useCallback(() => doSomething(id), [id]);
-
-// 使用 React.memo 避免不必要的重渲染
-const MemoizedComponent = React.memo(MyComponent);
-```
-
-**Vue**：
-```typescript
-// 使用 computed 缓存计算结果
-const filteredData = computed(() => data.value.filter(item => item.active));
-
-// 使用 v-show 代替 v-if（频繁切换场景）
-<div v-show="visible">内容</div>
-
-// 长列表使用虚拟滚动
-<virtual-list :data-sources="list" :data-key="'id'" />
-```
-
----
-
-## UI 设计还原规范
-
-当用户提供设计稿时，必须 **100% 还原**视觉效果：
-
-### 还原要求
-
-| 类别 | 要求 | 误差范围 |
-|-----|------|---------|
-| 间距 | margin、padding 精确匹配 | ±2px |
-| 尺寸 | 宽度、高度、行高精确 | ±2px |
-| 颜色 | 使用精确 HEX/RGB 色值 | 精确匹配 |
-| 字体 | 大小、粗细、行高精确 | 精确匹配 |
-| 圆角 | border-radius 精确值 | 精确匹配 |
-| 阴影 | box-shadow 参数精确 | 精确匹配 |
-| 交互 | hover/active/disabled 状态完整 | 全部实现 |
-
-### 样式编写
-
-```less
-// ✅ 正确：使用设计稿精确数值
-.custom-button {
-  width: 120px;
-  height: 40px;
-  padding: 9px 24px;
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 22px;
-  background: #1890ff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-// ❌ 错误：使用模糊值
-.wrong-button {
-  padding: 10px;      // 设计稿是 9px 24px
-  border-radius: 5px; // 设计稿是 4px
-  color: blue;        // 应用精确色值 #1890ff
-}
-```
-
----
-
-## API 请求规范
-
-### React
-
-```typescript
-// services/user.ts
-import request from '@/utils/request';
-
-export interface ListParams {
-  keyword?: string;
-  status?: number;
-  pageNum: number;
-  pageSize: number;
-}
-
-export const getUserList = (params: ListParams) => {
-  return request.get<ApiResponse<UserInfo[]>>('/api/users', { params });
+// ✅ 统一错误处理模式
+const fetchData = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const res = await api.getList(params);
+    setData(res.data);
+  } catch (err: any) {
+    const message = err?.response?.data?.message || err?.message || '请求失败';
+    setError(message);
+    notification.error({ message: '操作失败', description: message });
+  } finally {
+    setLoading(false);
+  }
 };
 
-export const createUser = (data: Partial<UserInfo>) => {
-  return request.post<ApiResponse<UserInfo>>('/api/users', data);
-};
-
-export const updateUser = (id: string, data: Partial<UserInfo>) => {
-  return request.put<ApiResponse<UserInfo>>(`/api/users/${id}`, data);
-};
-
-export const deleteUser = (id: string) => {
-  return request.delete<ApiResponse<void>>(`/api/users/${id}`);
-};
-```
-
-### Vue
-
-```typescript
-// api/user.ts
-import request from '@/utils/request';
-
-export const getUserList = (params: ListParams) => {
-  return request({ url: '/api/users', method: 'get', params });
-};
-
-export const createUser = (data: Partial<UserInfo>) => {
-  return request({ url: '/api/users', method: 'post', data });
-};
-
-export const updateUser = (id: string, data: Partial<UserInfo>) => {
-  return request({ url: `/api/users/${id}`, method: 'put', data });
-};
-
-export const deleteUser = (id: string) => {
-  return request({ url: `/api/users/${id}`, method: 'delete' });
+// ✅ 边界情况处理
+const renderContent = () => {
+  if (loading) return <Skeleton />;
+  if (error) return <ErrorBoundary message={error} onRetry={fetchData} />;
+  if (!data?.length) return <Empty description="暂无数据" />;
+  return <DataList data={data} />;
 };
 ```
 
 ---
 
-## 质量保障
+## 代码质量自检
 
-### 必须遵守
+### 自检清单
 
-1. **业务逻辑分离**：所有业务逻辑必须在 hooks/composables/mixins 中
-2. **类型安全**：TypeScript 项目必须有完整的类型定义
-3. **错误处理**：所有异步操作必须有 try-catch
-4. **加载状态**：所有数据请求必须有 loading 状态
-5. **空状态处理**：列表为空时显示空状态组件
+| 检查项 | 标准 |
+|-------|------|
+| TypeScript | 无类型错误、无 any 滥用、全局类型不重复引入 |
+| ESLint | 无警告、无 console.log/debugger |
+| 架构规范 | 业务逻辑分离、目录结构正确 |
+| 安全性 | 无 XSS 风险、无硬编码敏感信息 |
+| 性能 | 无不必要的渲染、资源已优化 |
+| 功能完整性 | 所有需求已实现 |
 
-### 禁止行为
+### 修复优先级
 
-- 禁止在组件中直接调用 API
-- 禁止遗留 `console.log`、`debugger`
-- 禁止使用 `any` 类型（特殊情况除外）
-- 禁止重复引入全局类型
-- 禁止硬编码魔法数字/字符串
+- **P0（阻断）**：类型错误、语法错误、安全漏洞
+- **P1（重要）**：ESLint 错误、架构问题
+- **P2（建议）**：代码优化、性能改进
 
-### 代码质量要求
+### 自检报告模板
 
-1. **完整性**：包含类型定义、错误处理、加载状态
-2. **健壮性**：处理边界情况（空数据、网络错误）
-3. **可维护性**：代码结构清晰，适当注释
-4. **性能**：合理使用缓存、避免不必要的渲染
+```markdown
+## 代码生成自检报告
+
+### ✅ 检查通过
+- [x] TypeScript 类型检查
+- [x] ESLint 规范检查
+- [x] 业务逻辑分离
+- [x] 安全性检查
+- [x] 功能完整性
+
+### ⚠️ 已修复问题
+- 修复 X 处全局类型重复引入
+- 删除 X 个未使用导入
+- 添加 X 处错误边界处理
+
+### 📋 生成文件
+1. ✅ src/pages/xxx/hooks/useTableData.ts
+2. ✅ src/pages/xxx/components/EditModal.tsx
+3. ✅ src/pages/xxx/index.tsx
+4. ✅ src/pages/xxx/types.ts
+5. ✅ src/pages/xxx/index.less
+```
 
 ---
 
-本规范作为 AI 代码生成的通用标准，确保生成的代码：
-- ✅ 符合前端最佳实践
-- ✅ 目录结构规范清晰
-- ✅ 代码风格统一
-- ✅ 类型定义完整
-- ✅ 可维护性强
+## 参考标准
 
-严格遵循本规范，生成高质量、可用的前端代码。
+- [Vue 官方风格指南](https://vuejs.org/style-guide/)
+- [React 官方文档](https://react.dev/)
+- [TypeScript 最佳实践](https://www.typescriptlang.org/docs/handbook/)
+- [OWASP 前端安全指南](https://owasp.org/www-project-web-security-testing-guide/)
+
+---
+
+## 禁止行为清单
+
+| 禁止项 | 说明 |
+|-------|------|
+| 组件内直接调用 API | 必须通过 hooks/composables |
+| 使用 any 类型 | 必须明确类型定义 |
+| 硬编码敏感信息 | 使用环境变量 |
+| 遗留调试代码 | console.log、debugger |
+| 重复引入全局类型 | 检查 .d.ts 文件 |
+| 硬编码魔法值 | 使用常量定义 |
+| 忽略错误处理 | 必须有 try-catch |
+| 跳过 loading 状态 | 异步操作必须有加载态 |
+
+---
+
+本规范确保生成的代码：
+- ✅ 符合架构最佳实践
+- ✅ 类型安全、代码健壮
+- ✅ 安全可靠、性能优良
+- ✅ 可测试、可维护
+- ✅ 风格统一、易于协作
+
+严格遵循本规范，生成企业级高质量前端代码。
