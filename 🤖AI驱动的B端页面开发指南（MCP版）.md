@@ -94,6 +94,52 @@ flowchart LR
     style O fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
 ```
 
+### 🔄 MCP 工作执行流程
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 用户
+    participant AI as 🤖 AI工具<br/>(Cursor/通义灵码)
+    participant MCP as 🟢 codegen-engine<br/>MCP服务
+    participant Code as 📁 项目代码
+
+    rect rgb(240, 248, 255)
+        Note over U,AI: 1️⃣ 用户发起请求
+        U->>AI: 输入需求："生成一个用户列表页"
+    end
+
+    rect rgb(255, 250, 240)
+        Note over AI,MCP: 2️⃣ AI 自动调用 MCP
+        AI->>MCP: 调用 quick_generate
+        MCP->>MCP: 检测技术栈 (React/Vue)
+        MCP->>MCP: 匹配最佳模板
+        MCP->>MCP: 获取组件库知识
+        MCP->>MCP: 读取示例代码
+        MCP-->>AI: 返回增强上下文
+    end
+
+    rect rgb(240, 255, 240)
+        Note over AI,Code: 3️⃣ AI 生成代码
+        AI->>AI: 结合 MCP 返回的模板+知识+规则
+        AI->>Code: 生成 hooks.ts
+        AI->>Code: 生成 index.tsx
+        AI->>Code: 生成 types.ts
+    end
+
+    rect rgb(255, 245, 238)
+        Note over AI,MCP: 4️⃣ 代码自检
+        AI->>MCP: 调用 check_code_compliance
+        MCP-->>AI: 返回检查结果
+        AI->>MCP: 调用 validate_code (TSC+ESLint)
+        MCP-->>AI: 返回验证结果
+    end
+
+    rect rgb(245, 255, 250)
+        Note over U,AI: 5️⃣ 输出给用户
+        AI-->>U: ✅ 代码生成完成，已通过规范检查
+    end
+```
+
 ### 📊 MCP vs 本地 Rules 对比
 
 | 对比项 | ❌ 本地 .cursorrules | ✅ codegen-engine MCP |
