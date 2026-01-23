@@ -115,6 +115,7 @@ sequenceDiagram
         MCP->>MCP: 匹配最佳模板
         MCP->>MCP: 获取组件库知识
         MCP->>MCP: 读取示例代码
+        MCP->>MCP: 读取规则文件 (ai-fe-code-std.md)
         MCP-->>AI: 返回增强上下文
     end
 
@@ -127,11 +128,12 @@ sequenceDiagram
     end
 
     rect rgb(255, 245, 238)
-        Note over AI,MCP: 4️⃣ 代码自检
+        Note over AI,MCP: 4️⃣ 规则兜底检查
         AI->>MCP: 调用 check_code_compliance
-        MCP-->>AI: 返回检查结果
+        MCP->>MCP: 校验是否符合 ai-fe-code-std.md 规则
+        MCP-->>AI: 返回规则检查结果
         AI->>MCP: 调用 validate_code (TSC+ESLint)
-        MCP-->>AI: 返回验证结果
+        MCP-->>AI: 返回代码验证结果
     end
 
     rect rgb(245, 255, 250)
