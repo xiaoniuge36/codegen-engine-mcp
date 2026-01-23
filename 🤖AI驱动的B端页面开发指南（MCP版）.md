@@ -50,6 +50,129 @@
 
 ---
 
+## 🔌 什么是 MCP？（小白必读）
+
+> **一句话理解**：MCP 就像一个"万能插头"，让不同的 AI 工具都能连接到同一个服务，获取相同的代码规范和模板。
+
+### MCP 工作原理图
+
+```mermaid
+flowchart TB
+    subgraph 传统方式["❌ 传统方式：各自为政"]
+        direction TB
+        P1[📁 项目A<br/>.cursorrules] -.->|手动维护| D1[👤 开发者A]
+        P2[📁 项目B<br/>.cursorrules] -.->|手动维护| D2[👤 开发者B]
+        P3[📁 项目C<br/>.cursorrules] -.->|手动维护| D3[👤 开发者C]
+    end
+    
+    subgraph MCP方式["✅ MCP 方式：统一管理"]
+        direction TB
+        S[🖥️ codegen-engine<br/>MCP 服务]
+        S --> R1[📋 代码规范]
+        S --> R2[📦 17+ 页面模板]
+        S --> R3[📚 组件库知识]
+        S --> R4[💻 示例代码]
+        
+        AI1[🤖 Cursor] -->|MCP协议| S
+        AI2[🤖 通义灵码] -->|MCP协议| S
+        AI3[🤖 Windsurf] -->|MCP协议| S
+    end
+    
+    style S fill:#90EE90
+    style R1 fill:#E6E6FA
+    style R2 fill:#E6E6FA
+    style R3 fill:#E6E6FA
+    style R4 fill:#E6E6FA
+    style P1 fill:#ffcccc
+    style P2 fill:#ffcccc
+    style P3 fill:#ffcccc
+```
+
+### MCP 解决了什么问题？
+
+```mermaid
+flowchart LR
+    subgraph 痛点["😫 传统痛点"]
+        Q1[📂 规则分散<br/>每个项目单独维护]
+        Q2[🔄 同步困难<br/>更新后手动复制]
+        Q3[👥 各自为政<br/>规则内容不一致]
+        Q4[📚 知识孤岛<br/>最佳实践无法共享]
+    end
+    
+    subgraph 方案["🎯 MCP 解决方案"]
+        A1[🎯 统一管理<br/>一处维护全局生效]
+        A2[⚡ 自动同步<br/>连接即获取最新]
+        A3[✅ 团队一致<br/>所有人相同规范]
+        A4[📖 知识共享<br/>模板示例自动注入]
+    end
+    
+    Q1 -->|MCP| A1
+    Q2 -->|MCP| A2
+    Q3 -->|MCP| A3
+    Q4 -->|MCP| A4
+    
+    style Q1 fill:#ffcccc
+    style Q2 fill:#ffcccc
+    style Q3 fill:#ffcccc
+    style Q4 fill:#ffcccc
+    style A1 fill:#90EE90
+    style A2 fill:#90EE90
+    style A3 fill:#90EE90
+    style A4 fill:#90EE90
+```
+
+### MCP vs 本地 Rules 对比
+
+```mermaid
+flowchart LR
+    subgraph 本地Rules["📝 本地 .cursorrules"]
+        L1[只有文字规则描述]
+        L2[AI 需要猜测用法]
+        L3[手动同步每个项目]
+        L4[无代码验证]
+    end
+    
+    subgraph MCP服务["🚀 codegen-engine MCP"]
+        M1[完整可运行示例代码]
+        M2[组件库知识图谱]
+        M3[服务端更新即时生效]
+        M4[TypeScript + ESLint 自检]
+    end
+    
+    L1 -.->|升级| M1
+    L2 -.->|升级| M2
+    L3 -.->|升级| M3
+    L4 -.->|升级| M4
+    
+    style L1 fill:#ffe6e6
+    style L2 fill:#ffe6e6
+    style L3 fill:#ffe6e6
+    style L4 fill:#ffe6e6
+    style M1 fill:#e6ffe6
+    style M2 fill:#e6ffe6
+    style M3 fill:#e6ffe6
+    style M4 fill:#e6ffe6
+```
+
+### 核心价值一图看懂
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    codegen-engine MCP 核心价值                   │
+├─────────────────┬─────────────────┬─────────────────┬───────────┤
+│  🎯 智能模板匹配  │  📚 组件库知识   │  📝 示例代码注入  │ ✅ 代码自检 │
+├─────────────────┼─────────────────┼─────────────────┼───────────┤
+│ 17+ 内置模板     │ Ant Design Pro  │ 完整可运行代码   │ TypeScript │
+│ React/Vue2/Vue3 │ Element Plus    │ 最佳实践参考     │ ESLint    │
+│ PC端/H5移动端   │ Element UI      │ 直接复制使用     │ 规范检查   │
+│ 自动匹配最佳    │ Vant 移动端     │ 避免AI猜测      │ 自动修复   │
+└─────────────────┴─────────────────┴─────────────────┴───────────┘
+
+         配置一次，全员生效 | 规范一处维护 | AI 生成代码自动合规
+```
+
+---
+
 ## 🔄 完整开发流程图
 
 ```mermaid
