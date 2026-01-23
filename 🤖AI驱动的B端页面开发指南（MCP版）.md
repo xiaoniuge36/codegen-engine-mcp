@@ -58,51 +58,43 @@
 
 ```mermaid
 flowchart TB
-    subgraph 问题["😫 传统痛点"]
-        direction LR
-        P1[📂 规则分散]
-        P2[🔄 同步困难]
-        P3[👥 各自为政]
-        P4[📚 知识孤岛]
+    subgraph Problems["传统痛点"]
+        P1["规则分散"]
+        P2["同步困难"]
+        P3["各自为政"]
+        P4["知识孤岛"]
     end
 
-    subgraph 用户["👤 开发者使用"]
-        direction LR
-        U1[🤖 Cursor]
-        U2[🤖 通义灵码]
-        U3[🤖 Windsurf]
+    subgraph Users["开发者 AI 工具"]
+        U1["Cursor"]
+        U2["通义灵码"]
+        U3["Windsurf"]
     end
 
-    subgraph 交互["🔄 AI 与 MCP 交互流程"]
-        direction TB
-        I1["1️⃣ 用户输入需求"] --> I2["2️⃣ AI 调用 MCP"]
-        I2 --> I3["3️⃣ 返回模板+知识+示例"]
-        I3 --> I4["4️⃣ AI 生成高质量代码"]
-        I4 --> I5["5️⃣ 自动规范检查"]
+    subgraph MCPService["codegen-engine MCP 服务"]
+        C1["智能模板匹配"]
+        C2["组件库知识"]
+        C3["示例代码注入"]
+        C4["代码自检"]
     end
 
-    subgraph MCP["🖥️ codegen-engine MCP 服务"]
-        direction TB
-        subgraph 核心能力["四大核心能力"]
-            direction LR
-            C1["🎯 智能模板匹配<br/>17+ 模板<br/>React/Vue2/Vue3"]
-            C2["📚 组件库知识<br/>Ant Design Pro<br/>Element Plus/UI"]
-            C3["📝 示例代码注入<br/>完整可运行代码<br/>最佳实践参考"]
-            C4["✅ 代码自检<br/>TypeScript<br/>ESLint"]
-        end
+    subgraph Flow["AI 与 MCP 交互"]
+        I1["用户输入需求"] --> I2["AI 调用 MCP"]
+        I2 --> I3["返回模板+知识"]
+        I3 --> I4["生成高质量代码"]
+        I4 --> I5["自动规范检查"]
     end
 
-    subgraph 价值["✨ 核心价值"]
-        direction LR
-        V1[配置一次<br/>全员生效]
-        V2[规范一处维护<br/>自动同步]
-        V3[AI生成代码<br/>自动合规]
+    subgraph Value["核心价值"]
+        V1["配置一次 全员生效"]
+        V2["规范一处维护"]
+        V3["AI生成代码自动合规"]
     end
 
-    问题 -.->|MCP 解决| MCP
-    用户 -->|MCP 协议| MCP
-    MCP --> 交互
-    交互 --> 价值
+    Problems -.->|MCP解决| MCPService
+    Users -->|MCP协议| MCPService
+    MCPService --> Flow
+    Flow --> Value
 
     style P1 fill:#ffcccc
     style P2 fill:#ffcccc
@@ -115,7 +107,6 @@ flowchart TB
     style V1 fill:#90EE90
     style V2 fill:#90EE90
     style V3 fill:#90EE90
-    style MCP fill:#f0f8ff
 ```
 
 ### 📊 MCP vs 本地 Rules 对比
