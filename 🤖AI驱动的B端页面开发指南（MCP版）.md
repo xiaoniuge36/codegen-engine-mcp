@@ -57,56 +57,41 @@
 ### 🎯 codegen-engine MCP 全景图
 
 ```mermaid
-flowchart TB
-    subgraph Problems["传统痛点"]
-        P1["规则分散"]
-        P2["同步困难"]
-        P3["各自为政"]
-        P4["知识孤岛"]
+flowchart LR
+    subgraph Input["🔴 传统痛点"]
+        direction TB
+        P["规则分散 | 同步困难 | 知识孤岛"]
     end
 
-    subgraph Users["开发者 AI 工具"]
-        U1["Cursor"]
-        U2["通义灵码"]
-        U3["Windsurf"]
+    subgraph AI["🤖 AI 工具"]
+        direction TB
+        A["Cursor / 通义灵码 / Windsurf"]
     end
 
-    subgraph MCPService["codegen-engine MCP 服务"]
-        C1["智能模板匹配"]
-        C2["组件库知识"]
-        C3["示例代码注入"]
-        C4["代码自检"]
+    subgraph MCP["🟢 codegen-engine MCP"]
+        direction TB
+        M1["📦 17+ 模板"]
+        M2["📚 组件知识"]
+        M3["💻 示例代码"]
+        M4["✅ 代码自检"]
     end
 
-    subgraph Flow["AI 与 MCP 交互"]
-        I1["用户输入需求"] --> I2["AI 调用 MCP"]
-        I2 --> I3["返回模板+知识"]
-        I3 --> I4["生成高质量代码"]
-        I4 --> I5["自动规范检查"]
+    subgraph Output["✨ 核心价值"]
+        direction TB
+        O["配置一次全员生效<br/>规范统一维护<br/>代码自动合规"]
     end
 
-    subgraph Value["核心价值"]
-        V1["配置一次 全员生效"]
-        V2["规范一处维护"]
-        V3["AI生成代码自动合规"]
-    end
+    Input -.->|痛点| AI
+    AI -->|MCP协议| MCP
+    MCP -->|增强生成| Output
 
-    Problems -.->|MCP解决| MCPService
-    Users -->|MCP协议| MCPService
-    MCPService --> Flow
-    Flow --> Value
-
-    style P1 fill:#ffcccc
-    style P2 fill:#ffcccc
-    style P3 fill:#ffcccc
-    style P4 fill:#ffcccc
-    style C1 fill:#E6E6FA
-    style C2 fill:#E6E6FA
-    style C3 fill:#E6E6FA
-    style C4 fill:#E6E6FA
-    style V1 fill:#90EE90
-    style V2 fill:#90EE90
-    style V3 fill:#90EE90
+    style P fill:#ffcccc,stroke:#ff6666,stroke-width:2px
+    style A fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style M1 fill:#e8f5e9,stroke:#4caf50
+    style M2 fill:#e8f5e9,stroke:#4caf50
+    style M3 fill:#e8f5e9,stroke:#4caf50
+    style M4 fill:#e8f5e9,stroke:#4caf50
+    style O fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
 ```
 
 ### 📊 MCP vs 本地 Rules 对比
