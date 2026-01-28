@@ -45,14 +45,17 @@
 - **react-drawer-form**: React 抽屉编辑表单（DrawerForm）
 - **react-drawer-detail**: React 抽屉详情（Drawer Detail）
 - **react-pc-file-upload**: React PC 文件上传组件（Ant Design Upload + 进度显示 + picture-card 模式）
+- **react-virtual-paginated-select**: React 大数据渲染下拉（虚拟列表 + 分页下拉 + 编辑回显）🆕
 
 #### Vue 3 模板
 - **vue3-standard-list-crud**: Vue 3 标准列表页（Element Plus + Composition API + 搜索 + 新增/编辑弹窗）
+- **vue3-virtual-paginated-select**: Vue 3 大数据渲染下拉（el-table-v2 + 分页下拉 + 编辑回显）🆕
 
 #### Vue 2 模板
 - **vue2-standard-list-crud**: Vue 2 标准列表页（Element UI + Options API + 搜索 + 新增/编辑弹窗）
 - **vue2-h5-file-upload**: Vue 2 H5 文件上传组件（Vant + 水印 + 多格式预览 + 网格/列表模式）
 - **vue2-pc-file-upload**: Vue 2 PC 文件上传组件（Element UI/Plus + 进度显示 + picture-card 模式）
+- **vue2-virtual-paginated-select**: Vue 2 大数据渲染下拉（vue-virtual-scroller + 分页下拉 + 编辑回显）🆕
 
 ### 使用方式
 
@@ -175,9 +178,34 @@ import type { ProjectItem } from './types';  // ❌ ProjectItem 是全局类型�
 
 ## 支持的技术栈
 
-- **React**: Ant Design Pro Components + TypeScript
+- **React PC**: Ant Design Pro Components + TypeScript（**统一使用 Pro**）
 - **Vue 3**: Element Plus + Composition API + TypeScript
 - **Vue 2**: Element UI + Options API
+
+### 🆕 React PC 统一使用 Pro 组件库
+
+**所有 React PC 模板统一使用 `@ant-design/pro-components`**，包括：
+- `ProTable` - 高级表格（替代 antd Table）
+- `ModalForm` / `DrawerForm` - 弹窗/抽屉表单
+- `ProFormText` / `ProFormSelect` 等 - 表单控件
+- `BetaSchemaForm` - 动态 Schema 表单
+
+**依赖检测与安装**：
+
+MCP 工具会自动检测项目是否安装了 Pro 组件库：
+- ✅ 已安装：直接生成代码
+- ❌ 未安装：提示安装命令，AI Agent 可自动执行安装
+
+```bash
+# Pro 组件库安装命令
+npm install @ant-design/pro-components --save
+```
+
+**为什么统一使用 Pro？**
+1. 当前大部分 React 模板已依赖 Pro（ProTable、ModalForm 等）
+2. Pro 组件功能更强大，代码更简洁
+3. Pro 向下兼容 antd，可以混用
+4. 统一技术栈减少维护成本
 
 ---
 

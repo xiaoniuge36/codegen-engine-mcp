@@ -85,6 +85,12 @@ export function generateCodeContext(text, projectPath = null, apiTypesPath = nul
   const checklist = [
     `✅ 技术栈: ${techStackInfo.techStack || '未检测到'}`,
     `✅ UI 库: ${techStackInfo.uiLibrary || '未检测到'}`,
+    // 🆕 Pro 依赖检测
+    techStackInfo.techStack === 'react' && techStackInfo.uiLibrary === 'antd'
+      ? (techStackInfo.hasProComponents 
+          ? `✅ Pro 组件库: 已安装 (${techStackInfo.proComponentsVersion || 'installed'})`
+          : `⚠️ Pro 组件库: 未安装，需要执行安装命令`)
+      : null,
     `✅ 匹配模板: ${matchResult.chosen?.name || '未匹配'}`,
     globalTypesInfo.found 
       ? `⚠️ 全局类型: 发现 ${globalTypesInfo.globalInterfaces.length} 个全局 interface，生成代码时不要 import`
@@ -95,7 +101,7 @@ export function generateCodeContext(text, projectPath = null, apiTypesPath = nul
     apiTypesInfo?.success
       ? `✅ 接口类型: 解析到 ${apiTypesInfo.interfaces.length} 个 interface`
       : apiTypesPath ? `⚠️ 接口类型: 解析失败` : `ℹ️ 接口类型: 未提供`
-  ]
+  ].filter(Boolean)
   
   const result = {
     // 核心信息
@@ -107,6 +113,20 @@ export function generateCodeContext(text, projectPath = null, apiTypesPath = nul
       fallbackResults: matchResult.fallbackResults,
       recommendation: matchResult.recommendation
     },
+    
+    // 🆕 React PC Pro 依赖检测结果（兜底安装方案）
+    proDependency: techStackInfo.techStack === 'react' && techStackInfo.uiLibrary === 'antd' ? {
+      installed: techStackInfo.hasProComponents,
+      version: techStackInfo.proComponentsVersion,
+      missing: techStackInfo.missingProDependency,
+      installCommand: techStackInfo.proInstallCommand,
+      recommendation: techStackInfo.missingProDependency
+        ? '⚠️ React PC 模板统一使用 @ant-design/pro-components，请先安装依赖后再生成代码'
+        : null,
+      autoInstallHint: techStackInfo.missingProDependency
+        ? '💡 AI Agent 可执行以下命令自动安装：npm install @ant-design/pro-components --save'
+        : null
+    } : null,
     
     // 代码资源
     codeExamples,
@@ -122,6 +142,10 @@ export function generateCodeContext(text, projectPath = null, apiTypesPath = nul
     
     // 关键提醒
     criticalReminders: [
+      // 🆕 Pro 依赖安装提醒（兜底方案）
+      techStackInfo.missingProDependency
+        ? `🚨 【依赖缺失】React PC 项目需要安装 Pro 组件库，请执行: ${techStackInfo.proInstallCommand}`
+        : null,
       globalTypesInfo.found 
         ? `🚨 全局类型警告: ${globalTypesInfo.globalInterfaces.join(', ')} 这些类型【绝对不要 import】，直接使用即可`
         : null,

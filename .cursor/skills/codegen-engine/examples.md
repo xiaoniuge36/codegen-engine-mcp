@@ -14,6 +14,7 @@
 6. [分步调用高级用法](#6-分步调用高级用法)
 7. [项目分析与诊断](#7-项目分析与诊断)
 8. [代码验证与修复](#8-代码验证与修复)
+9. [大数据渲染（虚拟列表 + 分页下拉）](#9-大数据渲染虚拟列表--分页下拉)
 
 ---
 
@@ -1058,3 +1059,463 @@ CallMcpTool({
 
 // 返回: { success: true, summary: { totalErrors: 0, totalWarnings: 0 } }
 ```
+
+---
+
+## 9. 大数据渲染（虚拟列表 + 分页下拉）
+
+### 场景描述
+
+用户需要创建一个属性值管理页面，包含：
+- 8000+ 条属性值数据，使用虚拟滚动不分页展示
+- 支持行内编辑
+- 上级分类使用分页下拉选择
+- 编辑时正确回显选中的分类
+
+### Step 1: 调用 quick_generate
+
+```javascript
+CallMcpTool({
+  server: "codegen-engine",
+  toolName: "quick_generate",
+  arguments: {
+    text: "做一个属性值管理页，8000+条数据虚拟滚动，支持行内编辑；上级分类用分页下拉选择",
+    projectPath: "D:/project/src/pages/attribute/index.tsx"
+  }
+})
+```
+
+### Step 2: 分析返回结果
+
+返回结果包含：
+
+```json
+{
+  "techStack": {
+    "detected": true,
+    "techStack": "react",
+    "framework": "umi",
+    "uiLibrary": "antd",
+    "isTypeScript": true
+  },
+  "templateMatch": {
+    "chosen": {
+      "id": "react-virtual-paginated-select",
+      "name": "React 大数据渲染下拉组件",
+      "score": 22
+    }
+  },
+  "codeExamples": {
+    "hooks/usePaginatedSelect.example.ts": "// 分页下拉 Hook 示例...",
+    "components/VirtualTable.example.tsx": "// 虚拟表格组件示例...",
+    "components/PaginatedSelect.example.tsx": "// 分页下拉组件示例...",
+    "index.example.tsx": "// 主页面示例...",
+    "types.example.ts": "// 类型定义示例..."
+  },
+  "criticalReminders": [
+    "📋 虚拟列表必须设置固定行高（rowHeight/itemSize）",
+    "📋 分页下拉必须实现选中项合并逻辑（编辑回显）",
+    "📋 搜索必须防抖处理（300-500ms）"
+  ]
+}
+```
+
+### Step 3: 按顺序生成代码
+
+**1. 先生成 hooks 文件** `src/pages/attribute/hooks/usePaginatedSelect.ts`：
+
+```typescript
+import { useState, useCallback, useRef } from 'react';
+import { debounce } from 'lodash-es';
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export const usePaginatedSelect = (options: {
+  fetchApi: (params: any) => Promise<{ data: SelectOption[]; total: number }>;
+  debounceMs?: number;
+}) => {
+  const { fetchApi, debounceMs = 500 } = options;
+  
+  const [state, setState] = useState({
+    options: [] as SelectOption[],
+    loading: false,
+    pageNo: 1,
+    pageSize: 10,
+    total: 0,
+    keyword: '',
+    hasLoaded: false,
+  });
+
+  // 当前选中项（编辑回显用）
+  const selectedItemRef = useRef<SelectOption | null>(null);
+
+  /**
+   * 合并选中项和分页数据
+   * 确保编辑场景下选中项始终可见
+   */
+  const mergeOptions = useCallback((pageItems: SelectOption[]) => {
+    const map = new Map<string, SelectOption>();
+
+    // 先放选中项（优先级最高）
+    const selectedItem = selectedItemRef.current;
+    if (selectedItem?.value) {
+      map.set(selectedItem.value, selectedItem);
+    }
+
+    // 再放分页数据（去重）
+    pageItems.forEach((item) => {
+      if (item?.value && !map.has(item.value)) {
+        map.set(item.value, item);
+      }
+    });
+
+    return Array.from(map.values());
+  }, []);
+
+  // 获取分页数据
+  const fetchData = useCallback(async () => {
+    setState((prev) => ({ ...prev, loading: true }));
+
+    try {
+      const res = await fetchApi({
+        pageNo: state.pageNo,
+        pageSize: state.pageSize,
+        keyword: state.keyword || undefined,
+      });
+
+      setState((prev) => ({
+        ...prev,
+        options: mergeOptions(res.data || []),
+        total: res.total || 0,
+        hasLoaded: true,
+        loading: false,
+      }));
+    } catch (error) {
+      setState((prev) => ({ ...prev, loading: false }));
+    }
+  }, [fetchApi, state.pageNo, state.pageSize, state.keyword, mergeOptions]);
+
+  // 远程搜索（带防抖）
+  const handleSearch = useCallback(
+    debounce((keyword: string) => {
+      setState((prev) => ({ ...prev, keyword, pageNo: 1 }));
+      fetchData();
+    }, debounceMs),
+    [fetchData, debounceMs]
+  );
+
+  // 设置选中项（编辑回显）
+  const setSelectedItem = useCallback((item: SelectOption | null) => {
+    selectedItemRef.current = item;
+    if (item) {
+      setState((prev) => ({
+        ...prev,
+        options: mergeOptions(prev.options.length > 0 ? prev.options : [item]),
+      }));
+    }
+  }, [mergeOptions]);
+
+  return {
+    ...state,
+    handleSearch,
+    handlePageChange: (page: number) => {
+      setState((prev) => ({ ...prev, pageNo: page }));
+      fetchData();
+    },
+    handleVisibleChange: (open: boolean) => {
+      if (open && !state.hasLoaded) fetchData();
+    },
+    setSelectedItem,
+    fetchData,
+  };
+};
+```
+
+**2. 生成虚拟表格组件** `src/pages/attribute/components/VirtualTable.tsx`：
+
+```tsx
+import React, { useMemo, useCallback } from 'react';
+import { FixedSizeList as List } from 'react-window';
+import { Spin, Empty, Input, Button, Space } from 'antd';
+
+interface VirtualTableProps<T> {
+  data: T[];
+  columns: any[];
+  rowHeight?: number;
+  height?: number;
+  loading?: boolean;
+}
+
+const VirtualTable = <T extends { rowKey: string }>({
+  data,
+  columns,
+  rowHeight = 60,
+  height = 500,
+  loading = false,
+}: VirtualTableProps<T>) => {
+  const Row = useCallback(
+    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+      const row = data[index];
+      return (
+        <div style={style} className="virtual-table-row">
+          {columns.map((col) => (
+            <div key={col.key} className="virtual-table-cell">
+              {col.cellRenderer
+                ? col.cellRenderer({ rowData: row, rowIndex: index })
+                : row[col.dataKey] ?? '--'}
+            </div>
+          ))}
+        </div>
+      );
+    },
+    [data, columns]
+  );
+
+  if (!loading && data.length === 0) {
+    return <Empty description="暂无数据" />;
+  }
+
+  return (
+    <Spin spinning={loading}>
+      <div className="virtual-table-header">
+        {columns.map((col) => (
+          <div key={col.key} className="virtual-table-header-cell">
+            {col.title}
+          </div>
+        ))}
+      </div>
+      <List height={height} itemCount={data.length} itemSize={rowHeight} width="100%">
+        {Row}
+      </List>
+    </Spin>
+  );
+};
+
+export default VirtualTable;
+```
+
+**3. 生成分页下拉组件** `src/pages/attribute/components/PaginatedSelect.tsx`：
+
+```tsx
+import React, { useEffect } from 'react';
+import { Select, Pagination, Spin, Empty } from 'antd';
+import { usePaginatedSelect } from '../hooks/usePaginatedSelect';
+
+interface PaginatedSelectProps {
+  value?: string;
+  onChange?: (value: string) => void;
+  fetchApi: (params: any) => Promise<{ data: any[]; total: number }>;
+  initialSelectedItem?: { value: string; label: string } | null;
+}
+
+const PaginatedSelect: React.FC<PaginatedSelectProps> = ({
+  value,
+  onChange,
+  fetchApi,
+  initialSelectedItem,
+}) => {
+  const {
+    options,
+    loading,
+    pageNo,
+    pageSize,
+    total,
+    handleSearch,
+    handlePageChange,
+    handleVisibleChange,
+    setSelectedItem,
+  } = usePaginatedSelect({ fetchApi });
+
+  // 编辑回显：设置初始选中项
+  useEffect(() => {
+    if (initialSelectedItem) {
+      setSelectedItem(initialSelectedItem);
+    }
+  }, [initialSelectedItem, setSelectedItem]);
+
+  return (
+    <Select
+      value={value}
+      onChange={onChange}
+      showSearch
+      filterOption={false}
+      onSearch={handleSearch}
+      onDropdownVisibleChange={handleVisibleChange}
+      loading={loading}
+      options={options.map((item) => ({ value: item.value, label: item.label }))}
+      dropdownRender={(menu) => (
+        <div>
+          {menu}
+          {total > pageSize && (
+            <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+              <Pagination
+                size="small"
+                current={pageNo}
+                pageSize={pageSize}
+                total={total}
+                onChange={handlePageChange}
+              />
+            </div>
+          )}
+        </div>
+      )}
+      notFoundContent={loading ? <Spin size="small" /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+    />
+  );
+};
+
+export default PaginatedSelect;
+```
+
+**4. 生成主页面** `src/pages/attribute/index.tsx`：
+
+```tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Button, Input, message } from 'antd';
+import VirtualTable from './components/VirtualTable';
+import PaginatedSelect from './components/PaginatedSelect';
+import { getAttributeValues, getParentCategories } from '@/services/attribute';
+
+const AttributeValuePage: React.FC = () => {
+  const [tableData, setTableData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>();
+  
+  // 编辑回显：初始选中项
+  const [initialSelectedItem] = useState({
+    value: 'cat-50',
+    label: '分类 50',
+  });
+
+  // 加载 8000+ 条数据
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const res = await getAttributeValues();
+        setTableData(res.data);
+        message.success(`已加载 ${res.data.length} 条数据`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const columns = [
+    { key: 'index', title: '序号', cellRenderer: ({ rowIndex }) => rowIndex + 1 },
+    {
+      key: 'valueName',
+      dataKey: 'valueName',
+      title: '属性值名称',
+      cellRenderer: ({ rowData, rowIndex }) => (
+        rowData.isEditing ? (
+          <Input value={rowData.valueName} onChange={(e) => handleEdit(rowIndex, e.target.value)} />
+        ) : (
+          rowData.valueName
+        )
+      ),
+    },
+    { key: 'valueCode', dataKey: 'valueCode', title: '属性值编码' },
+    { key: 'actions', title: '操作', cellRenderer: ({ rowIndex }) => <Button>编辑</Button> },
+  ];
+
+  return (
+    <div className="attribute-page">
+      <Card title="上级分类" style={{ marginBottom: 16 }}>
+        <PaginatedSelect
+          value={selectedCategory}
+          onChange={setSelectedCategory}
+          fetchApi={getParentCategories}
+          initialSelectedItem={initialSelectedItem}
+        />
+      </Card>
+
+      <Card title={`属性值列表（共 ${tableData.length} 条）`}>
+        <VirtualTable
+          data={tableData}
+          columns={columns}
+          rowHeight={60}
+          height={500}
+          loading={loading}
+        />
+      </Card>
+    </div>
+  );
+};
+
+export default AttributeValuePage;
+```
+
+### Step 4: 检查代码规范
+
+```javascript
+CallMcpTool({
+  server: "codegen-engine",
+  toolName: "check_code_compliance",
+  arguments: {
+    generatedFiles: [
+      "src/pages/attribute/hooks/usePaginatedSelect.ts",
+      "src/pages/attribute/components/VirtualTable.tsx",
+      "src/pages/attribute/components/PaginatedSelect.tsx",
+      "src/pages/attribute/index.tsx"
+    ]
+  }
+})
+```
+
+### Vue 3 版本示例
+
+```javascript
+// 使用 vue3-virtual-paginated-select 模板
+CallMcpTool({
+  server: "codegen-engine",
+  toolName: "quick_generate",
+  arguments: {
+    text: "做一个属性值管理页，8000+条数据虚拟滚动，上级分类分页下拉选择",
+    projectPath: "D:/vue3-project/src/App.vue"
+  }
+})
+```
+
+Vue 3 版本使用：
+- 虚拟列表：`el-table-v2`（Element Plus 2.3.0+）
+- 分页下拉：Composable `usePaginatedSelect`
+- 编辑回显：合并选中项逻辑相同
+
+### Vue 2 版本示例
+
+```javascript
+// 使用 vue2-virtual-paginated-select 模板
+CallMcpTool({
+  server: "codegen-engine",
+  toolName: "quick_generate",
+  arguments: {
+    text: "做一个属性值管理页，虚拟滚动表格，分页下拉选择",
+    projectPath: "D:/vue2-project/src/App.vue"
+  }
+})
+```
+
+Vue 2 版本使用：
+- 虚拟列表：`vue-virtual-scroller@^1.1.2`
+- 分页下拉：Mixin `paginatedSelectMixin`
+- 编辑回显：合并选中项逻辑相同
+
+### 关键注意事项
+
+1. **虚拟列表**
+   - 必须设置固定行高 `rowHeight` / `itemSize`
+   - 使用 `React.memo` 或 `shallowRef` 优化重渲染
+
+2. **分页下拉**
+   - 搜索必须防抖（300-500ms）
+   - 必须实现 `mergeOptions` 选中项合并逻辑
+   - 首次展开时才加载数据
+
+3. **编辑回显**
+   - 详情接口返回后设置 `selectedItem`
+   - 每次分页请求后调用 `mergeOptions` 合并数据

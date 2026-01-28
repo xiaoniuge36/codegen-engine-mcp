@@ -34,6 +34,21 @@ const SCENE_WEIGHTS = {
   upload: {
     keywords: ['上传', '文件上传', '图片上传', '附件', 'upload'],
     weight: 4
+  },
+  // 大数据渲染场景
+  bigdata: {
+    keywords: ['虚拟列表', '虚拟滚动', '分页下拉', '大数据', '大数据量', '8000', '万级', '高性能', 'virtual', '回显', '属性值'],
+    weight: 6
+  },
+  // 虚拟滚动场景
+  virtual: {
+    keywords: ['虚拟', 'virtual', 'scroller', 'el-table-v2', 'react-window', '不分页'],
+    weight: 5
+  },
+  // 分页下拉场景
+  paginated: {
+    keywords: ['分页下拉', '分页选择', '远程搜索', '远程分页', '下拉分页', '编辑回显'],
+    weight: 5
   }
 }
 
@@ -98,6 +113,19 @@ export function scoreTemplate(text, tpl) {
     if (!text.includes('导入') && !text.includes('excel')) {
       score += 5
       sceneBoosts.push('详情场景组合: +5')
+    }
+  }
+
+  // 大数据渲染场景组合加分
+  if (scenes.includes('bigdata') || scenes.includes('virtual') || scenes.includes('paginated')) {
+    const bigDataKeywords = ['虚拟', '分页下拉', '大数据', '8000', '万级', '回显']
+    const matched = bigDataKeywords.filter(kw => text.includes(kw))
+    if (matched.length >= 2) {
+      score += 8
+      sceneBoosts.push(`大数据渲染场景组合: +8 (匹配: ${matched.join(', ')})`)
+    } else if (matched.length === 1) {
+      score += 4
+      sceneBoosts.push(`大数据渲染场景: +4 (匹配: ${matched[0]})`)
     }
   }
 

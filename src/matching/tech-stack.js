@@ -88,7 +88,12 @@ export function detectTechStack(projectPath = null) {
     buildTool: null,
     isTypeScript: false,
     packagePath: pkgPath,
-    projectName: pkgContent.name || 'unknown'
+    projectName: pkgContent.name || 'unknown',
+    // React PC 统一使用 Pro 相关检测
+    hasProComponents: false,
+    proComponentsVersion: null,
+    missingProDependency: false,
+    proInstallCommand: null
   }
   
   // 检测框架
@@ -112,6 +117,29 @@ export function detectTechStack(projectPath = null) {
   // 检测 UI 库
   if (deps['antd'] || deps['@ant-design/pro-components']) {
     result.uiLibrary = 'antd'
+    
+    // 🆕 React PC 统一使用 Pro - 检测 Pro 依赖
+    if (result.techStack === 'react') {
+      const hasProComponents = !!deps['@ant-design/pro-components']
+      const hasProTable = !!deps['@ant-design/pro-table']
+      const hasProForm = !!deps['@ant-design/pro-form']
+      
+      result.hasProComponents = hasProComponents || hasProTable || hasProForm
+      
+      if (hasProComponents) {
+        result.proComponentsVersion = deps['@ant-design/pro-components']
+      } else if (hasProTable) {
+        result.proComponentsVersion = deps['@ant-design/pro-table']
+      } else if (hasProForm) {
+        result.proComponentsVersion = deps['@ant-design/pro-form']
+      }
+      
+      // 如果是 React + antd 但没有 Pro，标记需要安装
+      if (deps['antd'] && !result.hasProComponents) {
+        result.missingProDependency = true
+        result.proInstallCommand = 'npm install @ant-design/pro-components --save'
+      }
+    }
   } else if (deps['element-plus']) {
     result.uiLibrary = 'element-plus'
   } else if (deps['element-ui']) {

@@ -1,0 +1,106 @@
+.virtual-table {
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+
+  &-header {
+    display: flex;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 500;
+  }
+
+  &-header-cell {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid #f0f0f0;
+    flex-shrink: 0;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &.fixed-left {
+      position: sticky;
+      left: 0;
+      background: #fafafa;
+      z-index: 2;
+    }
+
+    &.fixed-right {
+      position: sticky;
+      right: 0;
+      background: #fafafa;
+      z-index: 2;
+    }
+  }
+
+  &-body {
+    overflow-x: hidden !important;
+  }
+
+  &-row {
+    display: flex;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+    cursor: pointer;
+
+    &:hover {
+      background: #f5f5f5;
+    }
+
+    &.even {
+      background: #fff;
+
+      &:hover {
+        background: #f5f5f5;
+      }
+    }
+
+    &.odd {
+      background: #fafafa;
+
+      &:hover {
+        background: #f0f0f0;
+      }
+    }
+  }
+
+  &-cell {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid #f0f0f0;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &.fixed-left {
+      position: sticky;
+      left: 0;
+      background: inherit;
+      z-index: 1;
+    }
+
+    &.fixed-right {
+      position: sticky;
+      right: 0;
+      background: inherit;
+      z-index: 1;
+    }
+  }
+
+  &-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+  }
+}

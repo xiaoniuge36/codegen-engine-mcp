@@ -11,7 +11,7 @@ description: 使用AI代码生成引擎MCP工具进行智能前端代码生成�
 
 | 能力 | 说明 |
 |------|------|
-| 🎯 智能模板匹配 | 17个内置模板，自动识别需求匹配最佳模板 |
+| 🎯 智能模板匹配 | 16个内置模板，自动识别需求匹配最佳模板 |
 | 📚 组件库知识 | Ant Design Pro、Element Plus、Element UI、Vant等 |
 | 📝 示例代码 | 每个模板都有完整示例（hooks + 组件 + 样式） |
 | ✅ 规范内置 | ai-fe-code-std.md 已集成，无需手动添加 |
@@ -292,6 +292,44 @@ CallMcpTool({
 // Step 2: 根据返回的 react-pc-file-upload 模板生成代码
 ```
 
+### 场景5：大数据渲染（虚拟列表 + 分页下拉）
+
+```javascript
+// Step 1: 调用 quick_generate
+CallMcpTool({
+  server: "codegen-engine",
+  toolName: "quick_generate",
+  arguments: {
+    text: "做一个属性值管理页，8000+条数据虚拟滚动，上级分类用分页下拉选择",
+    projectPath: "D:/project/src/App.tsx"
+  }
+})
+
+// Step 2: 根据返回的模板生成代码
+// - 虚拟列表表格（react-window / el-table-v2 / vue-virtual-scroller）
+// - 分页下拉组件（远程搜索 + 编辑回显）
+// - hooks/composables 数据处理
+
+// Step 3: 检查代码规范
+CallMcpTool({
+  server: "codegen-engine",
+  toolName: "check_code_compliance",
+  arguments: {
+    generatedFiles: [
+      "src/pages/attribute/hooks/usePaginatedSelect.ts",
+      "src/pages/attribute/components/VirtualTable.tsx",
+      "src/pages/attribute/components/PaginatedSelect.tsx",
+      "src/pages/attribute/index.tsx"
+    ]
+  }
+})
+```
+
+**大数据渲染关键点：**
+- 虚拟列表必须设置**固定行高**
+- 分页下拉需实现**选中项合并逻辑**（编辑回显）
+- 搜索必须**防抖处理**（300-500ms）
+
 ---
 
 ## 分步调用流程（高级用法）
@@ -326,6 +364,7 @@ CallMcpTool({
 | `react-import-list-modal` | 导入列表弹窗 | 数据导入选择 |
 | `react-pc-file-upload` | PC文件上传 | 文件上传组件 |
 | `react-batch-schema-form` | 批量Schema表单 | 动态表单 |
+| `react-virtual-paginated-select` | 大数据渲染下拉 | 虚拟列表+分页下拉+编辑回显 |
 
 ### Vue2 模板
 
@@ -334,12 +373,14 @@ CallMcpTool({
 | `vue2-standard-list-crud` | 标准列表页 | 列表+搜索+CRUD弹窗 |
 | `vue2-pc-file-upload` | PC文件上传 | 文件上传组件 |
 | `vue2-h5-file-upload` | H5文件上传 | 移动端文件上传 |
+| `vue2-virtual-paginated-select` | 大数据渲染下拉 | 虚拟列表+分页下拉+编辑回显 |
 
 ### Vue3 模板
 
 | 模板ID | 名称 | 适用场景 |
 |--------|------|----------|
 | `vue3-standard-list-crud` | 标准列表页 | 列表+搜索+CRUD弹窗 |
+| `vue3-virtual-paginated-select` | 大数据渲染下拉 | 虚拟列表+分页下拉+编辑回显 |
 
 ---
 
@@ -544,6 +585,7 @@ CallMcpTool({
 | 页面创建 | "做一个页面"、"创建页面"、"列表页"、"详情页" |
 | 组件开发 | "创建组件"、"做个组件"、"弹窗"、"表单" |
 | CRUD操作 | "增删改查"、"CRUD"、"新增编辑" |
+| 大数据渲染 | "虚拟列表"、"虚拟滚动"、"分页下拉"、"大数据量"、"8000条"、"万级" |
 
 ---
 

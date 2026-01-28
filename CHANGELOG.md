@@ -1,3 +1,15 @@
+## [2.2.0] - 2026-01-28
+
+### Added
+- 🆕 React PC 统一使用 `@ant-design/pro-components` 组件库
+- 🆕 Pro 依赖自动检测功能（`detect_tech_stack` 返回 `hasProComponents`、`missingProDependency` 等字段）
+- 🆕 兜底安装方案：检测到缺少 Pro 依赖时，返回安装命令供 AI Agent 执行
+- 🆕 `generate_code_context` 返回 `proDependency` 对象，包含安装状态和建议
+
+### Changed
+- 更新 `rules/ai-fe-code-std.md` 技术栈说明，明确 React PC 统一使用 Pro
+- 更新 `MCP-TOOLS.md` 文档，添加 Pro 依赖检测和自动安装说明
+
 ## [2.1.1] - 2026-01-07
 
 ### Changed

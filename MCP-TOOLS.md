@@ -1,6 +1,6 @@
 # 🛠️ AI CodeGen Engine - MCP 工具文档
 
-> **v2.1.0** - 优化版本（新增一键生成、统计功能、无脑调用）
+> **v2.2.0** - React PC 统一使用 Pro 组件库 + 依赖自动检测与兜底安装
 
 ---
 
@@ -17,6 +17,7 @@
 | 代码生成 | "生成代码"、"写代码"、"帮我写" |
 | 页面创建 | "做一个页面"、"创建页面"、"列表页"、"详情页" |
 | 组件开发 | "创建组件"、"做个组件"、"弹窗"、"表单" |
+| 大数据渲染 | "虚拟列表"、"虚拟滚动"、"分页下拉"、"大数据量"、"8000条"、"万级数据" |
 
 ### 标准调用流程
 
@@ -415,6 +416,56 @@ npm run dev
 - **UI 库**：Ant Design、Element Plus、Element UI、Vant、Arco Design
 - **构建工具**：Vite、Webpack
 - **TypeScript**：是否使用 TypeScript
+- **Pro 组件库**：🆕 自动检测 `@ant-design/pro-components` 安装状态
+
+### 🆕 React PC 依赖自动检测与兜底安装
+
+**v2.2.0 新增**：React PC 项目统一使用 `@ant-design/pro-components`，MCP 会自动检测并提供兜底方案。
+
+**返回字段新增**：
+```json
+{
+  "hasProComponents": true,        // 是否已安装 Pro 组件库
+  "proComponentsVersion": "^2.6.0", // Pro 版本号
+  "missingProDependency": false,    // 是否缺少 Pro 依赖
+  "proInstallCommand": null         // 安装命令（缺失时提供）
+}
+```
+
+**兜底安装流程**：
+
+```
+detect_tech_stack
+       ↓
+ 检测到 React + antd
+       ↓
+ 检查 @ant-design/pro-components
+       ↓
+    ┌──────────────────┐
+    │ 已安装？          │
+    │  ├── 是 → 继续生成│
+    │  └── 否 → 返回安装命令
+    └──────────────────┘
+       ↓
+ AI Agent 执行: npm install @ant-design/pro-components --save
+       ↓
+ 继续生成代码
+```
+
+**AI Agent 使用示例**：
+```javascript
+// 1. 检测技术栈
+const techStack = await callTool('detect_tech_stack', { projectPath: '/path/to/project' })
+
+// 2. 如果缺少 Pro 依赖，先安装
+if (techStack.missingProDependency) {
+  console.log('⚠️ 正在安装 Pro 组件库...')
+  await executeCommand(techStack.proInstallCommand)
+}
+
+// 3. 继续生成代码
+await callTool('quick_generate', { text: '做一个列表页', projectPath: '/path/to/project' })
+```
 
 ---
 
@@ -631,12 +682,23 @@ npm run dev
     "detected": true,
     "techStack": "react",
     "uiLibrary": "antd",
-    "isTypeScript": true
+    "isTypeScript": true,
+    "hasProComponents": true,
+    "proComponentsVersion": "^2.6.0",
+    "missingProDependency": false
   },
   "globalTypes": {
     "found": true,
     "globalInterfaces": ["UserInfo", "TableItem"],
     "recommendation": "⚠️ 这些类型【绝对不要 import】"
+  },
+  "proDependency": {
+    "installed": true,
+    "version": "^2.6.0",
+    "missing": false,
+    "installCommand": null,
+    "recommendation": null,
+    "autoInstallHint": null
   },
   "templateMatch": {
     "chosen": { "id": "react-standard-list-crud", "name": "React 标准列表页", "score": 18 },
@@ -649,6 +711,7 @@ npm run dev
   "checklist": [
     "✅ 技术栈: react",
     "✅ UI 库: antd",
+    "✅ Pro 组件库: 已安装 (^2.6.0)",
     "✅ 匹配模板: React 标准列表页",
     "⚠️ 全局类型: 发现 2 个全局 interface，生成代码时不要 import",
     "✅ 示例代码: 已获取 4 个文件"
@@ -1050,7 +1113,7 @@ codegen-engine/
 │       └── [project-id]/
 ├── templates/
 │   ├── template-registry.json    # 模板注册表
-│   └── examples/                 # 示例代码库（13个模板）
+│   └── examples/                 # 示例代码库（16个模板）
 │       ├── react-standard-list-crud/
 │       ├── react-standard-modal-form/
 │       ├── react-standard-form-page/
@@ -1060,10 +1123,13 @@ codegen-engine/
 │       ├── react-import-list-modal/
 │       ├── react-pc-file-upload/
 │       ├── react-batch-schema-form/
+│       ├── react-virtual-paginated-select/   # 🆕 大数据渲染（虚拟列表+分页下拉）
 │       ├── vue2-standard-list-crud/
 │       ├── vue2-h5-file-upload/
 │       ├── vue2-pc-file-upload/
-│       └── vue3-standard-list-crud/
+│       ├── vue2-virtual-paginated-select/    # 🆕 大数据渲染（虚拟列表+分页下拉）
+│       ├── vue3-standard-list-crud/
+│       └── vue3-virtual-paginated-select/    # 🆕 大数据渲染（虚拟列表+分页下拉）
 ├── package.json
 ├── MCP-TOOLS.md                  # 本文档
 └── README.md                     # 项目说明
